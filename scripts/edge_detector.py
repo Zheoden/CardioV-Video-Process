@@ -1,14 +1,15 @@
 import cv2 as cv
-import os
+#import os
 import numpy as np
 import sys
 
 def resize_frame(frame, scale=0.75):
+    
     width = int(frame.shape[1] * scale)
     height = int(frame.shape[0] * scale)
     dimensions = (width,height)
     
-    return cv.resize(frame, dimensions, interpolation=cv.INTER_AREA)
+    return cv.resize(frame, dimensions, interpolation=cv.INTER_CUBIC)
 
 def get_img_borders(img):
     """Function that returns a processed image, showing only its edges
@@ -16,6 +17,7 @@ def get_img_borders(img):
     Args:
         path (_type_): image path
     """
+    
     img_resized = resize_frame(img)
     # Blurring may be necessary to not have extra edges
     blur = cv.GaussianBlur(img_resized, (3,3), cv.BORDER_DEFAULT)
@@ -30,6 +32,7 @@ def process_video(path):
     Args:
         path (_type_): Path to the video
     """
+    
     vid = cv.VideoCapture(path)
     video_frames = []
     success,image = vid.read()
@@ -45,6 +48,7 @@ def process_video(path):
     return video_frames
 
 def process_image(path):
+    
     img = cv.imread(path)
     img_resized = resize_frame(img)
     img_edges = get_img_borders(img_resized)
@@ -52,7 +56,23 @@ def process_image(path):
     
     return img_edges
 
+def get_img_contour(img):
+    
+    print('finding countours')
+    contours, hierarchies = cv.findContours(img, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
+    
+    print('creating blank img')
+    blank = np.zeros(img.shape, dtype = 'uint8')
+    print('writing contours')
+    print(f'{len(contours)} contours found')
+    # -1 is to use every contour detected
+    cv.drawContours(blank, contours, -1, (255,0,255), 2)
+    
+    return blank
+    
+
 def show_frames(list):
+    
     counter = 1
     total = len(list)
     for frame in list:
@@ -62,6 +82,7 @@ def show_frames(list):
         counter += 1
 
 def show_img(img):
+    
     print('Showing image')
     cv.imshow('Heart',img)
     cv.waitKey(0)
@@ -76,5 +97,6 @@ if __name__ == "__main__":
         print('initializing img processing')
         img = process_image(sys.argv[2])
         show_img(img)
-        
-    
+        print('generating contours')
+        img_contours = get_img_contour(img)
+        show_img(img_contours)
