@@ -1,4 +1,3 @@
-from ast import main
 import cv2 as cv
 import os
 import numpy as np
@@ -36,6 +35,9 @@ def process_video(path):
     success,image = vid.read()
     while success:
         success, frame = vid.read()
+        if not success:
+            print('End of video')
+            break
         frame_edges = get_img_borders(frame)
         video_frames.append(frame_edges)
     vid.release()
@@ -46,24 +48,33 @@ def process_image(path):
     img = cv.imread(path)
     img_resized = resize_frame(img)
     img_edges = get_img_borders(img_resized)
+    print('Img processed!')
+    
+    return img_edges
 
 def show_frames(list):
     counter = 1
+    total = len(list)
     for frame in list:
+        print(f'Showing img {counter} of {total}')
         cv.imshow(f'Heart_{counter}',frame)
         cv.waitKey(0)
         counter += 1
 
 def show_img(img):
+    print('Showing image')
     cv.imshow('Heart',img)
     cv.waitKey(0)
 
 if __name__ == "__main__":
     
     if sys.argv[1] == 'v':
+        print('initializing video processing')
         frame_list = process_video(sys.argv[2])
         show_frames(frame_list)
     elif sys.argv[1] == 'i':
+        print('initializing img processing')
         img = process_image(sys.argv[2])
         show_img(img)
+        
     
