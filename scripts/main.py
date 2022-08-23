@@ -6,8 +6,8 @@ import cv2 as cv
 import matplotlib.pyplot as plt
 import scipy.spatial.distance as dist
 import imutils
-from make_video import make_video_from_edge_maps
-import get_area_of_interest as pi
+#from make_video import make_video_from_edge_maps
+import image_processing as pi
 
 def resize_frame(frame, scale=0.75):
 
@@ -29,10 +29,10 @@ def get_img_borders(img, threshold = (3,3)):
     blur = cv.GaussianBlur(img_resized, threshold, cv.BORDER_DEFAULT)
     # Canny edge detecting:
     edges = cv.Canny(blur, 125, 175)
-
+    
     return edges
 
-def process_video(path):
+def process_video(path, show_images = False):
     """Function that returns the list of the video frames. They will br processed, showing only their edges
 
     Args:
@@ -48,13 +48,13 @@ def process_video(path):
             print('End of video')
             break
         #PRUEBAS
-        frame_edges = get_img_borders(frame, (5,5))
-        video_frames.append(frame_edges)
+        processed_frame = process_image(frame,'v', show_images)
+        video_frames.append(processed_frame)
     vid.release()
 
     return video_frames
 
-def process_image(path, show_images = False):
+def process_image(img_to_process, type, show_images = False):
     """
         Process image first read the img from the path provided
         Then it follows these next steps:
@@ -63,23 +63,24 @@ def process_image(path, show_images = False):
         3- Call function get borders
         4- Call function get contours 
     """    
-    img = cv.imread(path)
+    if type == 'i': img = cv.imread(img_to_process) 
+    elif type == 'v': img = img_to_process
 
-    show_img(img,'Heart Original') if show_images
+    show_img(img, 'Heart Original') if show_images else 1
     
     gray = pi.get_grays(img)
-    show_img(gray,"Areas in black and white") if show_images
+    show_img(gray,"Areas in black and white") if show_images else 1
     #print("applying thrershold")
     #thresh, thresh_img = cv.threshold(gray, 30, 255, cv.THRESH_BINARY)
     #img_resized = resize_frame(gray)
     
     img_edges = get_img_borders(gray)
-    show_img(img_edges,'Heart Edges') if show_images
+    show_img(img_edges,'Heart Edges') if show_images else 1
 
     contours, img_processed = pi.get_contours(img_edges, img)
 
-    show_img(img_processed,'Heart with contours') if show_images
-    show_img(contours,'Only contours heart') if show_images
+    show_img(img_processed,'Heart with contours') if show_images else 1
+    show_img(contours,'Only contours heart') if show_images else 1
 
     return img_edges
 
@@ -88,9 +89,10 @@ def get_img_contour(img):
 
     print('finding countours')
     contours, hierarchies = cv.findContours(img, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
-
+    
     print('creating blank img')
     blank = np.zeros(img.shape, dtype = 'uint8')
+    
     print('writing contours')
     print(f'{len(contours)} contours found')
     # -1 is to use every contour detected
@@ -107,6 +109,12 @@ def show_frames(list):
         cv.imshow(f'Heart_{counter}',frame)
         cv.waitKey(0)
         counter += 1
+        
+def calculate_perimeter(cont):
+   
+    for item in cont:
+        perimeter = cv.arcLength(item,True)
+        print(f"PERIMETER = {perimeter}")
 
 #PRUEBAS
 def show_frames2(list):
@@ -138,10 +146,7 @@ if __name__ == "__main__":
     if sys.argv[1] == 'v':
         print('initializing video processing')
         frame_list = process_video(sys.argv[2])
-        #PRUEBAS
-        # show_frames2(frame_list)
-        # print("Generating video")
-        make_video_from_edge_maps(frame_list, "video1.mp4")
+        #make_video_from_edge_maps(frame_list, "video1.mp4")
 
     elif sys.argv[1] == 'i':
         print('initializing img processing')
