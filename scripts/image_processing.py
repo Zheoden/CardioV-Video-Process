@@ -15,16 +15,6 @@ def resize_frame(frame, scale=0.75):
 
     return cv.resize(frame, dimensions, interpolation=cv.INTER_CUBIC)
 
-def get_area_of_interest(contours):
-
-    mask = np.zeros(img.shape, dtype = 'uint8')
-
-    cv.drawContours(mask, contours, -1, 255, cv.FILLED)
-
-    result = cv.bitwise_and(img, img, mask = mask)
-
-    return result, mask
-
 img = cv.imread(path)
 
 def empty(a):
@@ -35,7 +25,6 @@ cv.resizeWindow("Parameters", 640, 240)
 cv.createTrackbar("Threshold1", "Parameters", 0, 255, empty)
 cv.createTrackbar("Threshold2", "Parameters", 0, 255, empty)
 cv.createTrackbar("Area", "Parameters", 1000, 30000, empty)
-cv.createTrackbar("Contrast", "Parameters", 1, 2, empty)
 
 
 
@@ -61,26 +50,58 @@ def get_grays(img):
     return gray
 
 
-def get_contours(img, img_contour, filter_contours):
+def get_contours(img, img_contour, filter_contours, filled):
 
     # RETR (Retrival method): Hay 2 metodos principales, External, que devuleve unicamente los contornos extremamente externos. Tree devuelve todos los contornos
     # CHAIN_APROX: Es la aproximacion. Con NONE obtenemos todos los puntos de contornos, y con SIMPLE obtenemos menos puntos.
     contours, hierarchy = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
     area_min = cv.getTrackbarPos("Area", "Parameters")
 
+    if filled:
+        print("drawing filled contours")
+        color = (255,255,255)
+        contour_thickness = -1
+    else:
+        color = (255,0,255)
+        contour_thickness = 3
+
     for cnt in contours:
         area = cv.contourArea(cnt)
         if not filter_contours or area > area_min:
-            cv.drawContours(img_contour, cnt, -1, (255,0,255), 7)
+            cv.drawContours(img_contour, [cnt], -1, color, contour_thickness)
 
-            # peri = cv.arcLength(cnt, True)
-            # approx = cv.approxPolyDP(cnt, 0.02 * peri, True)
-            # print(len(approx))
-            # x, y, w, h = cv.boundingRect(approx)
-            # cv.rectangle(img_contour, (x, y), (x + w, y + h), (0, 255, 0), 5)
+def get_area_of_interest(img_dil, img):
 
-            # cv.putText(img_contour, "Ps: " + str(len(approx)), (x + w + 20, y + 20), cv.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
-            # cv.putText(img_contour, "Aa: " + str(int(area)), (x + w + 20, y + 45), cv.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
+    contours, hierarchy = cv.findContours(img_dil, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
+
+    areas = []
+    for cnt in contours:
+        area = cv.contourArea(cnt)
+        areas.append(area)
+
+    max_area = max(areas)
+    max_area_index = areas.index(max_area)
+
+    area_of_interest = contours[max_area_index]
+
+    mask = np.zeros(img_dil.shape, dtype = 'uint8')
+    cv.drawContours(mask, [area_of_interest], -1, 255, -1)
+
+    cv.imshow("Mask", mask)
+    cv.waitKey(0)
+
+    x, y, w, h = cv.boundingRect(area_of_interest)
+
+    result = cv.bitwise_and(img, img, mask = mask)
+
+    cropped = result[y:y+h,x:x+w]
+
+    cv.imshow("Cropped", cropped)
+    cv.waitKey(0)
+
+    # result = cv.bitwise_and(img, img, mask = mask)
+
+    return mask, mask
 
 while True:
 
@@ -88,6 +109,7 @@ while True:
 
     img_contour_non_filtered = img.copy()
     img_contour_filtered = img.copy()
+    img_area_of_interest = img.copy()
 
     img_blur = cv.GaussianBlur(gray, (47, 47), 1)
 
@@ -98,16 +120,16 @@ while True:
     kernel = np.ones((5, 5))
     img_dil = cv.dilate(img_canny, kernel, iterations=1)
 
-    get_contours(img_dil, img_contour_non_filtered, False)
-    get_contours(img_dil, img_contour_filtered, True)
+    area_of_interest, mask = get_area_of_interest(img_dil, gray)
 
-    area_of_interest, mask = get_area_of_interest(img_contour_filtered)
+    get_contours(img_dil, img_contour_non_filtered, False, False)
+    get_contours(img_dil, img_contour_filtered, True, False)
 
-    img_stack = stack_images(0.7,([img, img_blur, img_canny],
-                                  [img_dil, img_contour_non_filtered,img_contour_filtered],
-                                  [mask, mask, area_of_interest]))
+    # img_stack = stack_images(0.5,([img, img_blur, img_canny],
+    #                               [img_dil, img_contour_non_filtered,img_contour_filtered]))
+                                #   [mask, mask, area_of_interest]))
 
-    cv.imshow("Result", img_stack)
+    # cv.imshow("Result", img_stack)
 
     if cv.waitKey(40) & 0xFF==ord('d'):
         break
