@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import scipy.spatial.distance as dist
 import imutils
 #from make_video import make_video_from_edge_maps
-import image_processing as pi
+#import image_processing as pi
 
 def resize_frame(frame, scale=0.75):
 
@@ -17,87 +17,156 @@ def resize_frame(frame, scale=0.75):
 
     return cv.resize(frame, dimensions, interpolation=cv.INTER_CUBIC)
 
-def get_img_borders(img, threshold = (3,3)):
+def get_area_of_interest(img, show_images= True):
+    
+    gray = get_grays(img)
+    img_borders = get_img_borders(gray, canny1= 0, canny2= 0)
+    contours, hierarchy = cv.findContours(img_borders, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
+
+    areas = []
+    for cnt in contours:
+        area = cv.contourArea(cnt)
+        areas.append(area)
+
+    max_area = max(areas)
+    max_area_index = areas.index(max_area)
+    area_of_interest = contours[max_area_index]
+    mask = np.zeros(img_borders.shape, dtype = 'uint8')
+    cv.drawContours(mask, [area_of_interest], -1, 255, -1)
+
+    show_img(mask, "Mask") if show_images else 1
+
+    return mask
+
+def get_grays(img):
+    
+    hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+    
+    # Generally, hue is measured in 360 degrees of a colour circle, but in OpenCV the hue scale is only 180 degrees
+    # The saturation value is usually measured from 0 to 100% but in OpenCV the scale for saturation is from 0 to 255.
+    # value (brightness) is usually measured from 0 to 100% but in OpenCV the scale for value is from 0 to 255
+    lower_gray = np.array([0,0,0])
+    upper_gray = np.array([180,64,255])
+    mask = cv.inRange(hsv, lower_gray, upper_gray)
+    resulthsv = cv.bitwise_and(img, img, mask = mask)
+    gray = cv.cvtColor(resulthsv, cv.COLOR_BGR2GRAY)
+
+    return gray
+
+def get_img_borders(img, threshold = (3,3), canny1= 125, canny2= 175):
     """Function that returns a processed image, showing only its edges
 
     Args:
         path (_type_): image path
     """
-
-    img_resized = resize_frame(img)
+    #img_resized = resize_frame(img)
     # Blurring may be necessary to not have extra edges
-    blur = cv.GaussianBlur(img_resized, threshold, cv.BORDER_DEFAULT)
+    blur = cv.GaussianBlur(img, threshold, cv.BORDER_DEFAULT)
     # Canny edge detecting:
-    edges = cv.Canny(blur, 125, 175)
+    edges = cv.Canny(blur, canny1, canny2)
+    kernel = np.ones((5, 5))
+    img_dil = cv.dilate(edges, kernel, iterations=1)
     
-    return edges
+    return img_dil
 
-def process_video(path, show_images = False):
+def process_video(path, show_images = True):
     """Function that returns the list of the video frames. They will br processed, showing only their edges
 
     Args:
         path (_type_): Path to the video
     """
-
     vid = cv.VideoCapture(path)
     video_frames = []
-    success,image = vid.read()
-    while success:
+    success, frame = vid.read()
+    
+    area_mask = get_area_of_interest(frame, show_images)
+    while success:        
+        processed_frame = process_image(frame, area_mask, show_images)
+        video_frames.append(processed_frame)
         success, frame = vid.read()
         if not success:
             print('End of video')
             break
-        #PRUEBAS
-        processed_frame = process_image(frame,'v', show_images)
-        video_frames.append(processed_frame)
+        
     vid.release()
 
     return video_frames
 
-def process_image(img_to_process, type, show_images = False):
+def process_image(img, area_mask, show_images = True):
     """
         Process image first read the img from the path provided
         Then it follows these next steps:
-        1- Apply color filter to get clean areas
-        2- Convert img to black and white
+        1- Apply color filter to get clean areas and a black and white img
         3- Call function get borders
         4- Call function get contours 
     """    
-    if type == 'i': img = cv.imread(img_to_process) 
-    elif type == 'v': img = img_to_process
-
     show_img(img, 'Heart Original') if show_images else 1
     
-    gray = pi.get_grays(img)
-    show_img(gray,"Areas in black and white") if show_images else 1
-    #print("applying thrershold")
-    #thresh, thresh_img = cv.threshold(gray, 30, 255, cv.THRESH_BINARY)
-    #img_resized = resize_frame(gray)
+    x, y, w, h = cv.boundingRect(area_mask)
+    gray = get_grays(img)
+    result = cv.bitwise_and(gray, gray, mask = area_mask)
+    cropped = result[y:y+h,x:x+w]
     
-    img_edges = get_img_borders(gray)
+    
+    show_img(cropped,"Areas in black and white") if show_images else 1
+    
+    img_edges = get_img_borders(cropped)
     show_img(img_edges,'Heart Edges') if show_images else 1
 
-    contours, img_processed = pi.get_contours(img_edges, img)
-
-    show_img(img_processed,'Heart with contours') if show_images else 1
-    show_img(contours,'Only contours heart') if show_images else 1
+    img_processed, contours = get_img_contour(img_edges)
+    show_img(img_processed,'Heart contours') if show_images else 1
 
     return img_edges
 
+def get_contours(img, img_contour, filter_contours):
+
+    # RETR (Retrival method): Hay 2 metodos principales, External, que devuleve unicamente los contornos extremamente externos. Tree devuelve todos los contornos
+    # CHAIN_APROX: Es la aproximacion. Con NONE obtenemos todos los puntos de contornos, y con SIMPLE obtenemos menos puntos.
+    contours, hierarchy = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
+    area_min = cv.getTrackbarPos("Area", "Parameters")
+
+    for cnt in contours:
+        area = cv.contourArea(cnt)
+        if not filter_contours or area > area_min:
+            cv.drawContours(img_contour, cnt, -1, (255,0,255), 7)
+
+            # peri = cv.arcLength(cnt, True)
+            # approx = cv.approxPolyDP(cnt, 0.02 * peri, True)
+            # print(len(approx))
+            # x, y, w, h = cv.boundingRect(approx)
+            # cv.rectangle(img_contour, (x, y), (x + w, y + h), (0, 255, 0), 5)
+
+            # cv.putText(img_contour, "Ps: " + str(len(approx)), (x + w + 20, y + 20), cv.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
+            # cv.putText(img_contour, "Aa: " + str(int(area)), (x + w + 20, y + 45), cv.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
+    return img
 
 def get_img_contour(img):
-
+    """
+    Args:
+        img: img with dilated borders
+    """
+    
+    # RETR (Retrival method): Hay 2 metodos principales, External, que devuleve unicamente los contornos extremamente externos. Tree devuelve todos los contornos
+    # CHAIN_APROX: Es la aproximacion. Con NONE obtenemos todos los puntos de contornos, y con SIMPLE obtenemos menos puntos.
+    #CHAIN_APPROX_NONE test
+    
+    contours, hierarchies = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    area_min = 1000
     print('finding countours')
-    contours, hierarchies = cv.findContours(img, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
+    color = (255,0,255)
+    contour_thickness = 2
     
     print('creating blank img')
     blank = np.zeros(img.shape, dtype = 'uint8')
-    
     print('writing contours')
     print(f'{len(contours)} contours found')
-    # -1 is to use every contour detected
-    cv.drawContours(blank, contours, -1, (255,0,255), 2)
-    return blank
+    
+    for cnt in contours:
+        area = cv.contourArea(cnt)
+        if area > area_min:
+            cv.drawContours(blank, [cnt], -1, color, contour_thickness)
+            
+    return blank,contours
 
 
 def show_frames(list):
@@ -134,24 +203,26 @@ def show_frames2(list):
             break
 
     cv.destroyAllWindows()
-
+    
+    
 def show_img(img, name = 'Heart'):
 
     print(f'Showing {name} image')
     cv.imshow(name, img)
     cv.waitKey(0)
 
-if __name__ == "__main__":
-
-    if sys.argv[1] == 'v':
+    
+def process_selector(type,path, show_images= True):
+    
+    if type == 'v':
         print('initializing video processing')
-        frame_list = process_video(sys.argv[2])
-        #make_video_from_edge_maps(frame_list, "video1.mp4")
-
-    elif sys.argv[1] == 'i':
+        frame_list = process_video(path)
+    elif type == 'i':
         print('initializing img processing')
-        img = process_image(sys.argv[2])
-        show_img(img)
-        print('generating contours')
-        img_contours = get_img_contour(img)
-        show_img(img_contours)
+        img_to_process = cv.imread(path)
+        mask = get_area_of_interest(img_to_process)
+        img = process_image(img_to_process, mask, show_images)
+
+if __name__ == "__main__":
+    
+    process_selector(sys.argv[1], sys.argv[2])
