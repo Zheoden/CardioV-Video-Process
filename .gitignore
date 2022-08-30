@@ -1,4 +1,8 @@
-scripts/__pycache__/*
+#pycache directories
+scripts/__pycache__
+scripts/api/__pycache__
+
+#file extensions
 *.pyc
 *.jpg
 *.avi
