@@ -69,7 +69,7 @@ def get_img_borders(img, threshold = (3,3), canny1= 125, canny2= 175):
     
     return img_dil
 
-def process_video(path, show_images = True):
+def process_video(path, show_images = False):
     """Function that returns the list of the video frames. They will br processed, showing only their edges
 
     Args:
@@ -92,7 +92,7 @@ def process_video(path, show_images = True):
 
     return video_frames
 
-def process_image(img, area_mask, show_images = True):
+def process_image(img, area_mask, show_images = False):
     """
         Process image first read the img from the path provided
         Then it follows these next steps:
@@ -212,22 +212,22 @@ def show_img(img, name = 'Heart'):
     cv.waitKey(0)
 
     
-def process_selector(type,path, show_images= True):
+def process_selector(type, path, show_images= False):
     
+    ret_val = 'hi'
     if type == 'v':
         print('initializing video processing')
-        frame_list = process_video(path)
+        frame_list = process_video(path, show_images)
+        ret_val = 'Video processed'
     elif type == 'i':
-        print('initializing img processing')
+        print('initializing img processing. Path:')
+        print(path)
         img_to_process = cv.imread(path)
-        mask = get_area_of_interest(img_to_process,show_images)
+        mask = get_area_of_interest(img_to_process, show_images)
         img = process_image(img_to_process, mask, show_images)
+        ret_val = 'Image processed'
+    return ret_val
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
     
-    if(sys.argv[3] == 'True'):
-        show_images= True 
-    else:
-        show_images = False
-    print("showing imgs") if show_images else print("Not showing imgs")
-    process_selector(sys.argv[1], sys.argv[2],show_images)
+#     process_selector(sys.argv[1], sys.argv[2])
