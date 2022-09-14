@@ -184,6 +184,40 @@ def calculate_perimeter(cont):
     for item in cont:
         perimeter = cv.arcLength(item,True)
         print(f"PERIMETER = {perimeter}")
+        
+def estimate_volume(path):
+    ###
+    return 12
+
+def estimate_atrium_area(path):
+    ###
+    return 10
+
+def estimate_ventricle_area(path):
+    ###
+    return 11
+
+def estimate_muscle_thickness(path):
+    ###
+    return 2
+
+
+def estimate_video_values(path):
+    ###
+    i = 0
+    list_volume = []
+    list_area1 = []
+    list_area2 = []
+    list_muscle_t = []
+    while i<30:
+         list_volume.append(estimate_volume(path))
+         list_area1.append(estimate_atrium_area(path))
+         list_area2.append(estimate_ventricle_area(path))
+         list_muscle_t.append(estimate_muscle_thickness(path))
+         i+=1
+    
+    data_set = {"ventricle_volume":list_volume, "atrium_area":list_area1, "ventricle_area":list_area2, "muscle_thickness":list_muscle_t}
+    return data_set
 
 #PRUEBAS
 def show_frames2(list):
@@ -227,6 +261,16 @@ def process_selector(type, path, show_images= False):
         img = process_image(img_to_process, mask, show_images)
         ret_val = 'Image processed'
     return ret_val
+
+def process_values(path, type= 'i'):
+    
+    if(type == 'i'):
+        data_set = {"ventricle_volume":f"{estimate_volume(path)}", "atrium_area":f"{estimate_atrium_area(path)}", "ventricle_volume":f"{estimate_volume(path)}", "ventricle_area":f"{estimate_ventricle_area(path)}", "muscle_thickness":f"{estimate_muscle_thickness(path)}"}
+    elif(type == 'v'):
+        data_set = estimate_video_values(path)
+    
+    return data_set
+
 
 # if __name__ == "__main__":
     
