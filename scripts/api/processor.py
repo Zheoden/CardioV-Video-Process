@@ -6,8 +6,9 @@ import cv2 as cv
 import matplotlib.pyplot as plt
 import scipy.spatial.distance as dist
 import imutils
-#from make_video import make_video_from_edge_maps
-#import image_processing as pi
+import math
+
+_CENTIMETERS = 0.2
 
 def resize_frame(frame, scale=0.75):
 
@@ -68,6 +69,20 @@ def get_img_borders(img, threshold = (3,3), canny1= 125, canny2= 175):
     img_dil = cv.dilate(edges, kernel, iterations=1)
     
     return img_dil
+
+def get_img_borders_no_dil(img, threshold = (3,3), canny1= 125, canny2= 175):
+    """Function that returns a processed image, showing only its edges
+
+    Args:
+        path (_type_): image path
+    """
+    # Blurring may be necessary to not have extra edges
+    blur = cv.GaussianBlur(img, threshold, cv.BORDER_DEFAULT)
+    # Canny edge detecting:
+    edges = cv.Canny(blur, canny1, canny2)
+    
+    return edges
+
 
 def process_video(path, show_images = False):
     """Function that returns the list of the video frames. They will br processed, showing only their edges
@@ -168,6 +183,77 @@ def get_img_contour(img):
             
     return blank,contours
 
+def get_img_contour_max_area(img):
+    
+    contours, hierarchies = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    print('finding countours')
+    color = (255,0,255)
+    contour_thickness = 1
+    
+    print('creating blank img')
+    blank = np.zeros(img.shape, dtype = 'uint8')
+    print('writing contours')
+    print(f'{len(contours)} contours found')
+    
+    areas = []
+    for cnt in contours:
+        area = cv.contourArea(cnt)
+        areas.append(area)
+    max_area = max(areas)
+    max_area_index = areas.index(max_area)
+
+    max_contour = contours[max_area_index]
+    cv.drawContours(blank, [max_contour], -1, color, contour_thickness)
+    
+    return blank, max_contour
+
+def get_minimum_area(img, name_value = 'value'):
+    
+    img_borders = get_img_borders_no_dil(img)
+    img_contours, max_contour = get_img_contour_max_area(img_borders)
+    #show_img(img_contours, "CONTOUR")
+    x, y, w, h = cv.boundingRect(max_contour)
+    cropped = img[y:y+h,x:x+w]
+
+    return cropped
+
+def simpson_method(img):
+    
+    cropped = get_minimum_area(img, 'original')
+    (h, w) = cropped.shape[:2]
+    
+    print(f"width:{w} height:{h}")
+    evaluate_height = h // 12
+    #evaluate_height = 10
+    print(f"ev height:{evaluate_height}")
+    counter = evaluate_height
+    actual_height = 0
+    contador = 1
+    img_cut_list = []
+    while( counter <= h ):
+        img_cut = np.zeros((evaluate_height+2,w+2,3),dtype="uint8")
+        img_cut[1:1+evaluate_height,1:1+w] = cropped[actual_height:counter,0:w]
+        cropped_min = get_minimum_area(img_cut)
+        img_cut_list.append(cropped_min)
+        actual_height = counter
+        counter+=evaluate_height
+        contador+=1
+    
+    final_volume = calculate_cilinder_volume(img_cut_list, _CENTIMETERS)
+    print(f"Ventricle volume: {final_volume} cm3")
+    return final_volume
+    
+def calculate_cilinder_volume(list_cilinders, centimeters):
+    
+    total_volume = 0
+    for cil in list_cilinders:
+        (h, w) = cil.shape[:2]
+        height = h*centimeters
+        width = w*centimeters
+        print(f"Calculating volume with height of : {height} and diameter of : {width} centimeters")
+        total_volume = height*(width/2)**2*math.pi
+    
+    return total_volume
 
 def show_frames(list):
 
@@ -185,38 +271,51 @@ def calculate_perimeter(cont):
         perimeter = cv.arcLength(item,True)
         print(f"PERIMETER = {perimeter}")
         
-def estimate_volume(path):
-    ###
-    return 12
 
-def estimate_atrium_area(path):
+def estimate_atrium_area(img):
     ###
     return 10
 
-def estimate_ventricle_area(path):
+def estimate_ventricle_area(img):
     ###
     return 11
 
-def estimate_muscle_thickness(path):
+def estimate_muscle_thickness(img):
     ###
     return 2
 
-
 def estimate_video_values(path):
-    ###
-    i = 0
+
+    vid = cv.VideoCapture(path)
+    video_frames = []
+    success, frame = vid.read()
+    
+    while success:        
+        video_frames.append(frame)
+        success, frame = vid.read()
+        if not success:
+            print('End of video')
+            break
+        
+    vid.release()
+    
     list_volume = []
     list_area1 = []
     list_area2 = []
     list_muscle_t = []
-    while i<30:
-         list_volume.append(estimate_volume(path))
-         list_area1.append(estimate_atrium_area(path))
-         list_area2.append(estimate_ventricle_area(path))
-         list_muscle_t.append(estimate_muscle_thickness(path))
-         i+=1
+    for img in video_frames:
+         list_volume.append(simpson_method(img))
+         list_area1.append(estimate_atrium_area(img))
+         list_area2.append(estimate_ventricle_area(img))
+         list_muscle_t.append(estimate_muscle_thickness(img))
     
     data_set = {"ventricle_volume":list_volume, "atrium_area":list_area1, "ventricle_area":list_area2, "muscle_thickness":list_muscle_t}
+    return data_set
+
+def estimate_img_values(path):
+    
+    img = cv.imread(path)
+    data_set = {"ventricle_volume":f"{simpson_method(img)}", "atrium_area":f"{estimate_atrium_area(img)}", "ventricle_area":f"{estimate_ventricle_area(img)}", "muscle_thickness":f"{estimate_muscle_thickness(img)}"}
     return data_set
 
 #PRUEBAS
@@ -265,13 +364,8 @@ def process_selector(type, path, show_images= False):
 def process_values(path, type= 'i'):
     
     if(type == 'i'):
-        data_set = {"ventricle_volume":f"{estimate_volume(path)}", "atrium_area":f"{estimate_atrium_area(path)}", "ventricle_volume":f"{estimate_volume(path)}", "ventricle_area":f"{estimate_ventricle_area(path)}", "muscle_thickness":f"{estimate_muscle_thickness(path)}"}
+        data_set = estimate_img_values(path)
     elif(type == 'v'):
         data_set = estimate_video_values(path)
     
     return data_set
-
-
-# if __name__ == "__main__":
-    
-#     process_selector(sys.argv[1], sys.argv[2])
