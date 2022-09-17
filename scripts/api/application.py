@@ -3,11 +3,10 @@ from flask import Flask, jsonify, request
 import processor as pc
 
 app = Flask(__name__)
-root_directory = ""
+root_directory = "C:/Users/matia/cardiov/"
 
 @app.route('/ping')
 def ping():
-    
     return 'Pong'
 
 @app.route('/processImage')
@@ -34,6 +33,16 @@ def get_file_info():
     final_path = root_directory + path
     val = pc.process_selector(path= final_path, type= type)
     return val
+
+@app.route('/getHeartValues')
+def get_heart_values():
+    
+    path = request.args.get('path')
+    type = request.args.get('type')
+    final_path = root_directory + path
+    val = pc.process_values(path= final_path,type = type)
+    return val
+
 
 if __name__ == '__main__':
     app.run(debug= True, port= 4000)
