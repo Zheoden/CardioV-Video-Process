@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import scipy.spatial.distance as dist
 import imutils
 import math
+import urllib
 
 _CENTIMETERS = 0.2
 
@@ -274,29 +275,30 @@ def calculate_perimeter(cont):
 
 def estimate_atrium_area(img):
     ###
-    return 10
+    return -1
 
 def estimate_ventricle_area(img):
     ###
-    return 11
+    return -1
 
 def estimate_muscle_thickness(img):
     ###
-    return 2
+    return -1
 
 def estimate_video_values(path):
 
     vid = cv.VideoCapture(path)
     video_frames = []
     success, frame = vid.read()
+    frames = 0
     
-    while success:        
+    while success or frames <= 40:        
         video_frames.append(frame)
         success, frame = vid.read()
         if not success:
             print('End of video')
             break
-        
+        frames += 1
     vid.release()
     
     list_volume = []
@@ -312,9 +314,8 @@ def estimate_video_values(path):
     data_set = {"ventricle_volume":list_volume, "atrium_area":list_area1, "ventricle_area":list_area2, "muscle_thickness":list_muscle_t}
     return data_set
 
-def estimate_img_values(path):
+def estimate_img_values(img):
     
-    img = cv.imread(path)
     data_set = {"ventricle_volume":f"{simpson_method(img)}", "atrium_area":f"{estimate_atrium_area(img)}", "ventricle_area":f"{estimate_ventricle_area(img)}", "muscle_thickness":f"{estimate_muscle_thickness(img)}"}
     return data_set
 
@@ -352,20 +353,32 @@ def process_selector(type, path, show_images= False):
         print('initializing video processing')
         frame_list = process_video(path, show_images)
         ret_val = 'Video processed'
+        
     elif type == 'i':
         print('initializing img processing. Path:')
         print(path)
-        img_to_process = cv.imread(path)
+        resp = urllib.request.urlopen(path)
+        image = np.asarray(bytearray(resp.read()), dtype="uint8")
+        img_to_process = cv.imdecode(image, cv.IMREAD_COLOR)
+        #img_to_process = cv.imread(path)
         mask = get_area_of_interest(img_to_process, show_images)
         img = process_image(img_to_process, mask, show_images)
         ret_val = 'Image processed'
+        
     return ret_val
 
 def process_values(path, type= 'i'):
     
     if(type == 'i'):
-        data_set = estimate_img_values(path)
+        print('initializing img volume estimation. URL:')
+        print(path)
+        resp = urllib.request.urlopen(path)
+        image = np.asarray(bytearray(resp.read()), dtype="uint8")
+        img_to_process = cv.imdecode(image, cv.IMREAD_COLOR)
+        data_set = estimate_img_values(img_to_process)
+        
     elif(type == 'v'):
+        print(path)
         data_set = estimate_video_values(path)
     
     return data_set
