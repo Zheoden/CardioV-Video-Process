@@ -5,9 +5,9 @@ import boto3
 import os
 
 s3_client = boto3.client('s3',
-                    aws_access_key_id= os.environ['AWS_KEY_ID'],
-                    aws_secret_access_key= os.environ['AWS_ACCESS_KEY'])
-s3_bucket_name = os.environ['BUCKET_NAME']
+                    aws_access_key_id= 'AKIA4BMMFY4ZGPTTZ556',
+                    aws_secret_access_key= '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')
+s3_bucket_name = 'cardiov-assets'
 
 app = Flask(__name__)
 #root_directory = "C:/Users/matia/cardiov/"
@@ -56,3 +56,4 @@ def get_heart_values():
 
 if __name__ == '__main__':
     app.run(debug= True, port= 4000)
+
