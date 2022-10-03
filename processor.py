@@ -1,11 +1,13 @@
+from logging import raiseExceptions
 import cv2 as cv
 import numpy as np
 import urllib
-from process_functions import image_functions as imf
+from process_functions import image_functions as imf, segmentation
+from process_functions import segmentation as sg
 
 _CENTIMETERS = 0.2
 _ERROR_VALUE = -1
-MASK = -1
+MASK = 'nothing'
 
 def process_video(url, show_images= False):
     
@@ -82,28 +84,31 @@ def process_image(url, show_images = False):
     image = np.asarray(bytearray(resp.read()), dtype="uint8")
     img_to_process = cv.imdecode(image, cv.IMREAD_COLOR)
     
-    #mask = cv.imread(mask, cv.IMREAD_GRAYSCALE) --> when mask url is provided
+    try:
+        mask = sg.get_ventricle_mask(img_to_process) # replace with img when segmentation is finished
+    except:
+        raise Exception("Unable to get the mask, aborting")
     
     try:
-        volume = imf.simpson_method(img_to_process)
+        volume = imf.simpson_method(mask)
     except Exception as error:
         print(f"Error {error} while trying to retreive ventricle volume")
         volume = _ERROR_VALUE
     
     try:
-        atrium_area = imf.estimate_atrium_area(img_to_process)
+        atrium_area = imf.calculate_perimeter(mask)
     except Exception as error:
         print(f"Error {error} while trying to retreive atrium area")
         atrium_area = _ERROR_VALUE
     
     try:
-        ventricle_area = imf.estimate_ventricle_area(img_to_process)
+        ventricle_area = imf.estimate_ventricle_area(mask)
     except Exception as error:
         print(f"Error {error} while trying to retreive ventricle area")
         ventricle_area = _ERROR_VALUE
     
     try:
-        muscle_thickness = imf.estimate_muscle_thickness(img_to_process, MASK)
+        muscle_thickness = imf.estimate_muscle_thickness(img_to_process, mask)
     except Exception as error:
         print(f"Error {error} while trying to retreive muscle thickness")
         muscle_thickness = _ERROR_VALUE

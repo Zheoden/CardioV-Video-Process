@@ -157,7 +157,7 @@ def get_img_contour(img):
     #CHAIN_APPROX_NONE test
     
     contours, hierarchies = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-    area_min = 1000
+    #area_min = 1000
     print('finding countours')
     color = (255,0,255)
     contour_thickness = 2
@@ -169,8 +169,8 @@ def get_img_contour(img):
     
     for cnt in contours:
         area = cv.contourArea(cnt)
-        if area > area_min:
-            cv.drawContours(blank, [cnt], -1, color, contour_thickness)
+        #if area > area_min:
+        cv.drawContours(blank, [cnt], -1, color, contour_thickness)
             
     return blank, contours
 
@@ -293,14 +293,21 @@ def get_left_ventricle_walls(img, mask):
     x_margin = 10
     y_margin = 0
 
+    print("INVERTED MASK")
     inverted_mask = cv.bitwise_not(mask)
     
     #getting cropping rectangle
+    
+    print("GETTING BORDERS")
     mask_borders = get_img_borders(mask)
+    
+    print("GETTING CONTOURS")
     mask_contours, max_contours = get_img_max_contours(mask_borders, 1)
     x, y, w, h = cv.boundingRect(max_contours[0])
 
     #applying mask to image
+    
+    print("MASKING")
     masked_img = cv.bitwise_and(img, img, mask = inverted_mask)
 
     #preventing margin overflow
@@ -309,6 +316,8 @@ def get_left_ventricle_walls(img, mask):
     high_y = min(y+h+y_margin, height)
     low_x = max(x-x_margin, 0)
     high_x = min(x+w+x_margin, width)
+    
+    print("CROPPING")
     cropped_img = masked_img[low_y:high_y,low_x:high_x]
 
     return cropped_img
@@ -353,7 +362,6 @@ def calculate_wall_thickness(wall_cuts_list, centimeters):
         i += 1
         (h, w) = wall_cut.shape[:2]
         print(f'wall_cut pixel width: {w}')
-        show_img(wall_cut, f"wall_cut ( {i} / {amount_of_cuts} )")     
         width = w*centimeters
         print(f"Calculating average wall thickness with thickness of : {width} centimeters")
         thickness_sum += width
@@ -363,7 +371,7 @@ def calculate_wall_thickness(wall_cuts_list, centimeters):
     return average_thickness
 
 
-def estimate_muscle_thickness(img, mask, show_images = False):
+def estimate_muscle_thickness(img, mask_in = 'nothing', show_images = False):
     """Estimates the thickness of the ventricle walls.
 
     Args:
@@ -377,10 +385,12 @@ def estimate_muscle_thickness(img, mask, show_images = False):
     Returns:
         Float: Average muscle thickness
     """
-
-    if mask == -1:
+    
+    if mask_in == 'nothing':
         raise Exception("No mask was granted") 
     
+    mask = cv.cvtColor(mask_in, cv.COLOR_BGR2GRAY)
+    print("GETTING WALLS")
     walls_img = get_left_ventricle_walls(img, mask)
 
     show_img(walls_img, "walls_img") if show_images else -1
@@ -406,19 +416,39 @@ def estimate_muscle_thickness(img, mask, show_images = False):
     return final_wall_thickness
     
     
-def calculate_perimeter(cont):
+def calculate_perimeter(img):
    
-    for item in cont:
+    #show_img(img,'original')
+    cropped = get_minimum_area(img, 'original')
+    #show_img(cropped)
+    mask_borders = get_img_borders_no_dil(cropped)
+    cropped_conts, contours = get_img_contour(mask_borders) 
+    #img_contours, max_contour = get_img_contour_max_area(mask_borders)
+    #show_img(cropped_conts,"no max")
+    #show_img(img_contours, "max area")
+  
+    perimeter = 0 
+    for item in contours:
         perimeter = cv.arcLength(item,True)
         print(f"PERIMETER = {perimeter}")
+    
+    return perimeter
         
 def estimate_atrium_area(img):
     ###
     return -1
 
 def estimate_ventricle_area(img):
-    ###
-    return -1
+    """Estimates the area of an object
+
+    Args:
+        img (OpenCV image): image to estimate area
+    """
+    cropped = get_minimum_area(img, 'original')
+    mask_borders = get_img_borders_no_dil(cropped)
+    cropped_conts, contours = get_img_contour(mask_borders)    
+    area = cv.contourArea(contours[0]) * _CENTIMETERS
+    return area
     
 def show_img(img, name = 'Heart'):
     """Show image wrapper
@@ -430,5 +460,3 @@ def show_img(img, name = 'Heart'):
     print(f'Showing {name} image')
     cv.imshow(name, img)
     cv.waitKey(0)
-
-
