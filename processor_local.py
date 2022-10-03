@@ -1,11 +1,13 @@
+from logging import raiseExceptions
 import cv2 as cv
 import numpy as np
 import urllib
-from process_functions import image_functions as imf
+from process_functions import image_functions as imf, segmentation
+from process_functions import segmentation as sg
 
 _CENTIMETERS = 0.2
 _ERROR_VALUE = -1
-MASK = -1
+MASK = "C:/Users/matia/cardiov/mask_test1.png"
 
 def process_video(path, show_images= False):
     
@@ -78,29 +80,34 @@ def process_image(path, show_images = False):
     
     print('Initializing img processing for path:')
     print(path)
-    img_to_process = cv.imread(path)    
-    #mask = cv.imread(mask, cv.IMREAD_GRAYSCALE) --> when mask url is provided
+    img_to_process = cv.imread(path)
     
     try:
-        volume = imf.simpson_method(img_to_process)
+        mask = sg.get_ventricle_mask(MASK) # replace with img when segmentation is finished
+    except:
+        raise Exception("Unable to get the mask, aborting")
+    
+    try:
+        volume = imf.simpson_method(mask)
     except Exception as error:
         print(f"Error {error} while trying to retreive ventricle volume")
         volume = _ERROR_VALUE
     
     try:
-        atrium_area = imf.estimate_atrium_area(img_to_process)
+        atrium_area = imf.calculate_perimeter(mask)
     except Exception as error:
         print(f"Error {error} while trying to retreive atrium area")
         atrium_area = _ERROR_VALUE
     
     try:
-        ventricle_area = imf.estimate_ventricle_area(img_to_process)
+        ventricle_area = imf.estimate_ventricle_area(mask)
     except Exception as error:
         print(f"Error {error} while trying to retreive ventricle area")
         ventricle_area = _ERROR_VALUE
     
     try:
-        muscle_thickness = imf.estimate_muscle_thickness(img_to_process, MASK)
+        print("INITIALIZING MUSCLE THICKNESS ESTIMATION PROCESS")
+        muscle_thickness = imf.estimate_muscle_thickness(img_to_process, mask)
     except Exception as error:
         print(f"Error {error} while trying to retreive muscle thickness")
         muscle_thickness = _ERROR_VALUE
