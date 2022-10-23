@@ -2,9 +2,28 @@ import cv2 as cv
 import numpy as np
 import cv2 as cv
 import math
+from PIL import Image
 
-_CENTIMETERS = 0.2
+_CENTIMETERS = 1
 _ERROR_VALUE = -1
+
+def make_square(img, min_size=256, fill_color=(0, 0, 0), new_size=(256,256)):
+    x, y = img.size
+    size = max(min_size, x, y)
+    new_img = Image.new('RGB', (size, size), fill_color)
+    new_img.paste(img, (int((size - x) / 2), int((size - y) / 2)))
+    return new_img.resize(new_size)
+
+# def multiple_make_square(imgs_path, output_path):
+#     imgs_list = os.listdir(files_path)
+#     for img in imgs_list:
+#         img_basename = os.path.basename(img)
+#         input_file = files_path + '/' + img
+#         out_path = output_path + '/' + img_basename
+#         img = Image.open(input_file)
+#         new_img = make_square(img)
+#         print(f'Final img size: {new_img.height}x{new_img.width}')
+#         new_img.save(out_path)
 
 def resize_frame(frame, scale=0.75):
     """_summary_
@@ -109,12 +128,12 @@ def get_img_max_contours(img, desired_amount):
     Function that returns a list of masks generated from the desired amount of max_area contours. It also returns a list with corresponding contours.
     """
     contours, hierarchies = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-    print('finding countours')
+    #print('finding countours')
     color = (255,0,255)
     contour_thickness = 1
 
-    print('writing contours')
-    print(f'{len(contours)} contours found')
+    #print('writing contours')
+    #print(f'{len(contours)} contours found')
     
     areas = []
     for cnt in contours:
@@ -158,14 +177,14 @@ def get_img_contour(img):
     
     contours, hierarchies = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
     #area_min = 1000
-    print('finding countours')
+    #print('finding countours')
     color = (255,0,255)
     contour_thickness = 2
     
-    print('creating blank img')
+    #print('creating blank img')
     blank = np.zeros(img.shape, dtype = 'uint8')
-    print('writing contours')
-    print(f'{len(contours)} contours found')
+    #print('writing contours')
+    #print(f'{len(contours)} contours found')
     
     for cnt in contours:
         area = cv.contourArea(cnt)
@@ -185,14 +204,14 @@ def get_img_contour_max_area(img):
     """
     
     contours, hierarchies = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-    print('finding countours')
+    #print('finding countours')
     color = (255,0,255)
     contour_thickness = 1
     
-    print('creating blank img')
+    #print('creating blank img')
     blank = np.zeros(img.shape, dtype = 'uint8')
-    print('writing contours')
-    print(f'{len(contours)} contours found')
+    #print('writing contours')
+    #print(f'{len(contours)} contours found')
     
     areas = []
     for cnt in contours:
@@ -237,10 +256,9 @@ def simpson_method(img):
     cropped = get_minimum_area(img, 'original')
     (h, w) = cropped.shape[:2]
     
-    print(f"width:{w} height:{h}")
-    evaluate_height = h // 12
-    #evaluate_height = 10
-    print(f"ev height:{evaluate_height}")
+    #print(f"width:{w} height:{h*_CENTIMETERS}")
+    evaluate_height = h // 24
+    #print(f"ev height:{evaluate_height*_CENTIMETERS}")
     counter = evaluate_height
     actual_height = 0
     contador = 1
@@ -251,8 +269,8 @@ def simpson_method(img):
         cropped_min = get_minimum_area(img_cut)
         img_cut_list.append(cropped_min)
         actual_height = counter
-        counter+=evaluate_height
-        contador+=1
+        counter += evaluate_height
+        contador += 1
     
     final_volume = calculate_cilinder_volume(img_cut_list, _CENTIMETERS)
     print(f"Ventricle volume: {final_volume} cm3")
@@ -268,14 +286,14 @@ def calculate_cilinder_volume(list_cilinders, centimeters):
     Returns:
         Float: total volume 
     """
-    
+    counter = 0
     total_volume = 0
     for cil in list_cilinders:
         (h, w) = cil.shape[:2]
-        height = h*centimeters
-        width = w*centimeters
-        print(f"Calculating volume with height of : {height} and diameter of : {width} centimeters")
-        total_volume = height*(width/2)**2*math.pi
+        height = (h - 2)*centimeters 
+        width = (w - 2)*centimeters 
+        total_volume = total_volume + height*(width/2)**2*math.pi
+        counter += 1
     
     return total_volume
 
@@ -293,21 +311,21 @@ def get_left_ventricle_walls(img, mask):
     x_margin = 10
     y_margin = 0
 
-    print("INVERTED MASK")
+    #print("INVERTED MASK")
     inverted_mask = cv.bitwise_not(mask)
     
     #getting cropping rectangle
     
-    print("GETTING BORDERS")
+   # print("GETTING BORDERS")
     mask_borders = get_img_borders(mask)
     
-    print("GETTING CONTOURS")
+    #print("GETTING CONTOURS")
     mask_contours, max_contours = get_img_max_contours(mask_borders, 1)
     x, y, w, h = cv.boundingRect(max_contours[0])
 
     #applying mask to image
     
-    print("MASKING")
+    #print("MASKING")
     masked_img = cv.bitwise_and(img, img, mask = inverted_mask)
 
     #preventing margin overflow
@@ -317,7 +335,7 @@ def get_left_ventricle_walls(img, mask):
     low_x = max(x-x_margin, 0)
     high_x = min(x+w+x_margin, width)
     
-    print("CROPPING")
+    #print("CROPPING")
     cropped_img = masked_img[low_y:high_y,low_x:high_x]
 
     return cropped_img
@@ -361,9 +379,9 @@ def calculate_wall_thickness(wall_cuts_list, centimeters):
     for wall_cut in wall_cuts_list:
         i += 1
         (h, w) = wall_cut.shape[:2]
-        print(f'wall_cut pixel width: {w}')
+        #print(f'wall_cut pixel width: {w}')
         width = w*centimeters
-        print(f"Calculating average wall thickness with thickness of : {width} centimeters")
+        #print(f"Calculating average wall thickness with thickness of : {width} centimeters")
         thickness_sum += width
     
     average_thickness = thickness_sum / amount_of_cuts
@@ -397,9 +415,9 @@ def estimate_muscle_thickness(img, mask_in = 'nothing', show_images = False):
 
     (h, w) = walls_img.shape[:2]
     
-    print(f"width:{w} height:{h}")
+    #print(f"width:{w} height:{h}")
     evaluate_height = h // 12
-    print(f"ev height:{evaluate_height}")
+    #print(f"ev height:{evaluate_height}")
     counter = evaluate_height
     actual_height = 0
     img_cut_list = []
@@ -457,6 +475,6 @@ def show_img(img, name = 'Heart'):
         img (OpenCV image): image to show
         name (str, optional): Name. Defaults to 'Heart'.
     """
-    print(f'Showing {name} image')
+    #print(f'Showing {name} image')
     cv.imshow(name, img)
     cv.waitKey(0)

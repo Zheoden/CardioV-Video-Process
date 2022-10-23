@@ -2,18 +2,16 @@ import io
 import cv2 as cv
 import numpy as np
 import tensorflow as tf
-from model_loader import cargarModelo
-def get_ventricle_mask(img):
+
+def get_ventricle_mask(img, loaded_model):
     """Creates a mask using the AI model
 
     Args:
         img (OpenCV Image): Image to get the mask
     """
 
-    loaded_model = cargarModelo()
-    # reading the image
-    img = io.imread(img)
-    img = cv.cvtColor(img, cv.COLOR_GRAY2RGB)
+    #img = io.imread(img)
+    #img = cv.cvtColor(img, cv.COLOR_GRAY2RGB)
     # Normalizing the image
     img = img * 1. / 255.
 
@@ -37,7 +35,7 @@ def get_ventricle_mask(img):
     tf.expand_dims(img, axis)
 
     # make prediction
-    predict = loaded_model.predict(img)[0][0]
+    predict = loaded_model.predict(img)[0]
 
     # - Calls function to get mask -
     #mask = cv.imread(img)

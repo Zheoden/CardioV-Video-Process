@@ -4,41 +4,50 @@ import numpy as np
 import urllib
 from process_functions import image_functions as imf, segmentation
 from process_functions import segmentation as sg
+from process_functions import plotter as plt
+from process_functions import model_loader as ml
+from PIL import Image as pim
+
 
 _CENTIMETERS = 0.2
 _ERROR_VALUE = -1
+_VOLUME_LIST = [180, 190, 200, 201, 202, 199, 182]
 MASK = "C:/Users/matia/cardiov/mask_test1.png"
 
-def process_video(path, show_images= False):
+def process_video(path, model, show_images= False):
     
     try:
         vid = cv.VideoCapture(path)
         video_frames = []
+        mask_list = []
         success, frame = vid.read()
         frames = 0
         
         while success or frames <= 40:
             
-            #
-            # CALL AI METHOD HERE - frame_mask = aimethod(frame) -> and pass it to both volume and wall thickness methods
-            #
+            try:
+                mask = segmentation.get_ventricle_mask(frame, model)
+            except:
+                mask = _ERROR_VALUE
             
+            mask_list.append(mask)
             video_frames.append(frame)
             success, frame = vid.read()
             if not success:
                 print('End of video')
                 break
             frames += 1
+            
         vid.release()
-        
         list_volume = []
         list_area1 = []
         list_area2 = []
         list_muscle_t = []
-        for img in video_frames:
-            
+        
+        for img, mask in zip(video_frames, mask_list):
+        
             try:
-                list_volume.append(imf.simpson_method(img))
+                list_volume.append(imf.simpson_method(mask))
             except Exception as error:
                 print(f"Error {error} while trying to retreive ventricle volume")
                 list_volume.append(_ERROR_VALUE)
@@ -56,7 +65,7 @@ def process_video(path, show_images= False):
                 list_area2.append(_ERROR_VALUE)
             
             try:
-                list_muscle_t.append(imf.estimate_muscle_thickness(img, MASK))
+                list_muscle_t.append(imf.estimate_muscle_thickness(img, mask))
             except Exception as error:
                 print(f"Error {error} while trying to retreive muscle thickness")
                 list_muscle_t.append(_ERROR_VALUE)
@@ -76,14 +85,16 @@ def process_video(path, show_images= False):
     return data_set
     
 
-def process_image(path, show_images = False):
+def process_image(path, model, show_images = False):
     
     print('Initializing img processing for path:')
     print(path)
     img_to_process = cv.imread(path)
     
     try:
-        mask = sg.get_ventricle_mask(MASK) # replace with img when segmentation is finished
+        mask_prev = sg.get_ventricle_mask(img_to_process, model) # replace with img when segmentation is finished
+        mask = np.asarray(mask_prev).squeeze().round()
+        imf.show_img(mask)
     except:
         raise Exception("Unable to get the mask, aborting")
     
@@ -118,3 +129,8 @@ def process_image(path, show_images = False):
                 "muscle_thickness": muscle_thickness}
     
     return data_set
+
+
+def make_a_graph():
+    volume_list = _VOLUME_LIST
+    plt.create_graph(_VOLUME_LIST, 'Frame', 'Volume - CM3', 'Variación de volumen')

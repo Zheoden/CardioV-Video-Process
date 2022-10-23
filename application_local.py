@@ -3,9 +3,11 @@ from flask import Flask, jsonify, request
 import processor_local as pc
 import boto3
 import os
+from process_functions import model_loader as ml
 
 application = Flask(__name__)
 root_directory = "C:/Users/matia/cardiov/"
+loaded_model = ml.cargarModelo()
 
 @application.route('/ping')
 def ping():
@@ -21,11 +23,16 @@ def get_heart_values():
     type = request.args.get('type')
     
     if type == 'i':
-        val = pc.process_image(path= path)
+        val = pc.process_image(path= path, model = loaded_model)
     else:
-        val = pc.process_video(path= path)
+        val = pc.process_video(path= path, model = loaded_model)
     
     return val
+
+@application.route('/showGraph')
+def show_graph():
+    
+    pc.make_a_graph()
 
 if __name__ == '__main__':
     application.run(debug= True, port= 4000)

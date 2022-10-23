@@ -9,7 +9,7 @@ _CENTIMETERS = 0.2
 _ERROR_VALUE = -1
 MASK = 'nothing'
 
-def process_video(url, show_images= False):
+def process_video(url, model, show_images= False):
     
     try:
         vid = cv.VideoCapture(url)
@@ -76,7 +76,7 @@ def process_video(url, show_images= False):
     return data_set
     
 
-def process_image(url, show_images = False):
+def process_image(url, model, show_images = False):
     
     print('Initializing img processing for URL:')
     print(url)
