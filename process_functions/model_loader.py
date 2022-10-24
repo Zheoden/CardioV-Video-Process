@@ -12,7 +12,7 @@ def cargarModelo():
 
     # Cargar la RNA desde disco
     #loaded_model = load_model(MODEL_PATH + "/" + FILENAME_MODEL_TO_LOAD, custom_objects={"focal_tversky": focal_tversky,"tversky": tversky})
-    loaded_model = load_model("C:\\Users\\matia\\CardioV-Video-Process\\model\\model_full.h5", custom_objects={"focal_tversky": focal_tversky,"tversky": tversky})
+    loaded_model = load_model("C:\\Users\\fedeb\\OneDrive\\Documentos\\Código_Proyecto_Final\\CardioV-Video-Process\\model\\model_full.h5", custom_objects={"focal_tversky": focal_tversky,"tversky": tversky})
     print("Modelo cargado de disco << ", loaded_model)
 
     #graph = tf.compat.v1.get_default_graph()
