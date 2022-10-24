@@ -6,7 +6,6 @@ from process_functions import image_functions as imf, segmentation
 from process_functions import segmentation as sg
 from process_functions import plotter as plt
 from process_functions import model_loader as ml
-from PIL import Image as pim
 
 
 _CENTIMETERS = 0.2
