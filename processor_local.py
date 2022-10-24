@@ -27,6 +27,7 @@ def process_video(path, model, show_images= False):
             
             try:
                 mask = segmentation.get_ventricle_mask(frame, model)
+                frame = imf.make_square(frame)
             except:
                 mask = _ERROR_VALUE
             
@@ -45,31 +46,35 @@ def process_video(path, model, show_images= False):
         list_muscle_t = []
         
         for img, mask in zip(video_frames, mask_list):
-        
+            # imf.show_img(mask, "mask")
             try:
                 list_volume.append(imf.simpson_method(mask))
+                # list_volume.append(_ERROR_VALUE)
             except Exception as error:
                 print(f"Error {error} while trying to retreive ventricle volume")
                 list_volume.append(_ERROR_VALUE)
             
             try:
                 list_area1.append(imf.estimate_atrium_area(img))
+                # list_area1.append(_ERROR_VALUE)
             except Exception as error:
                 print(f"Error {error} while trying to retreive atrium area")
                 list_area1.append(_ERROR_VALUE)
             
             try:
-                list_area2.append(imf.estimate_ventricle_area(img))
+                list_area2.append(imf.estimate_ventricle_area(mask))
+                # list_area2.append(_ERROR_VALUE)
             except Exception as error:
                 print(f"Error {error} while trying to retreive ventricle area")
                 list_area2.append(_ERROR_VALUE)
             
             try:
                 list_muscle_t.append(imf.estimate_muscle_thickness(img, mask))
+                # list_muscle_t.append(_ERROR_VALUE)
             except Exception as error:
                 print(f"Error {error} while trying to retreive muscle thickness")
                 list_muscle_t.append(_ERROR_VALUE)
-        
+                
         data_set = {"ventricle_volume": list_volume, 
                     "atrium_area": list_area1, 
                     "ventricle_area": list_area2, 
@@ -92,33 +97,37 @@ def process_image(path, model, show_images = False):
     img_to_process = cv.imread(path)
     
     try:
-        mask_prev = sg.get_ventricle_mask(img_to_process, model) # replace with img when segmentation is finished
-        mask = np.asarray(mask_prev).squeeze().round()
-        imf.show_img(mask)
+        mask = sg.get_ventricle_mask(img_to_process, model) # replace with img when segmentation is finished
+        img_to_process = imf.make_square(img_to_process)
     except:
         raise Exception("Unable to get the mask, aborting")
     
+
+
     try:
         volume = imf.simpson_method(mask)
+        # volume = _ERROR_VALUE
     except Exception as error:
         print(f"Error {error} while trying to retreive ventricle volume")
         volume = _ERROR_VALUE
     
     try:
         atrium_area = imf.calculate_perimeter(mask)
+        # atrium_area = _ERROR_VALUE
     except Exception as error:
         print(f"Error {error} while trying to retreive atrium area")
         atrium_area = _ERROR_VALUE
     
     try:
         ventricle_area = imf.estimate_ventricle_area(mask)
+        # ventricle_area = _ERROR_VALUE
     except Exception as error:
         print(f"Error {error} while trying to retreive ventricle area")
         ventricle_area = _ERROR_VALUE
     
     try:
-        print("INITIALIZING MUSCLE THICKNESS ESTIMATION PROCESS")
         muscle_thickness = imf.estimate_muscle_thickness(img_to_process, mask)
+        # muscle_thickness = _ERROR_VALUE
     except Exception as error:
         print(f"Error {error} while trying to retreive muscle thickness")
         muscle_thickness = _ERROR_VALUE

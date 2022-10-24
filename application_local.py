@@ -6,7 +6,7 @@ import os
 from process_functions import model_loader as ml
 
 application = Flask(__name__)
-root_directory = "C:/Users/matia/cardiov/"
+root_directory = "C:/Users/fedeb/cardiov/"
 loaded_model = ml.cargarModelo()
 
 @application.route('/ping')

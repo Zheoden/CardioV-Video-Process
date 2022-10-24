@@ -7,12 +7,14 @@ from PIL import Image
 _CENTIMETERS = 1
 _ERROR_VALUE = -1
 
-def make_square(img, min_size=256, fill_color=(0, 0, 0), new_size=(256,256)):
-    x, y = img.size
+def make_square(img, min_size=256, new_size=(256,256)):
+    x, y, z = img.shape
     size = max(min_size, x, y)
-    new_img = Image.new('RGB', (size, size), fill_color)
-    new_img.paste(img, (int((size - x) / 2), int((size - y) / 2)))
-    return new_img.resize(new_size)
+    new_img = np.zeros((size,size,3), dtype='uint8')
+    x_offset = int((size - x) / 2)
+    y_offset = int((size - y) / 2)
+    new_img[x_offset:size-x_offset, y_offset:size-y_offset] = img
+    return cv.resize(new_img, new_size)
 
 # def multiple_make_square(imgs_path, output_path):
 #     imgs_list = os.listdir(files_path)
@@ -256,6 +258,8 @@ def simpson_method(img):
     cropped = get_minimum_area(img, 'original')
     (h, w) = cropped.shape[:2]
     
+    show_img(cropped, "cropped")
+
     #print(f"width:{w} height:{h*_CENTIMETERS}")
     evaluate_height = h // 24
     #print(f"ev height:{evaluate_height*_CENTIMETERS}")
@@ -407,7 +411,8 @@ def estimate_muscle_thickness(img, mask_in = 'nothing', show_images = False):
     if mask_in == 'nothing':
         raise Exception("No mask was granted") 
     
-    mask = cv.cvtColor(mask_in, cv.COLOR_BGR2GRAY)
+    # mask = cv.cvtColor(mask_in, cv.COLOR_BGR2GRAY)
+    mask = mask_in
     print("GETTING WALLS")
     walls_img = get_left_ventricle_walls(img, mask)
 
@@ -437,10 +442,15 @@ def estimate_muscle_thickness(img, mask_in = 'nothing', show_images = False):
 def calculate_perimeter(img):
    
     #show_img(img,'original')
+    print("############################1111")
+    # img = get_grays(img)
     cropped = get_minimum_area(img, 'original')
     #show_img(cropped)
+    print("############################1111")
     mask_borders = get_img_borders_no_dil(cropped)
+    print("############################2222")
     cropped_conts, contours = get_img_contour(mask_borders) 
+    print("############################3333")
     #img_contours, max_contour = get_img_contour_max_area(mask_borders)
     #show_img(cropped_conts,"no max")
     #show_img(img_contours, "max area")
