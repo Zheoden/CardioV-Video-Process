@@ -23,8 +23,9 @@ def get_heart_values():
     
     file = request.args.get('file')
     print(f"FILE TO PROCESS: {file}")
+    #url = "https://assets.cardiov.org/4889cc19-a5e5-49a0-a900-22d219c707fc.avi" video
+    #url = 'https://cardiov-assets.s3.amazonaws.com/04050916-69a2-4751-9fbe-c164fdf7fad3.jpg' # img
     url = s3_client.generate_presigned_url( ClientMethod='get_object', Params={ 'Bucket': s3_bucket_name, 'Key': file } )
-    
     type = request.args.get('type')
     
     if type == 'i':
