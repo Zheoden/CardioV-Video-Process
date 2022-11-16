@@ -4,8 +4,15 @@ import cv2 as cv
 import math
 from PIL import Image
 
-_CENTIMETERS = 1
-_ERROR_VALUE = -1
+def rescale(image, scale):
+
+    (h, w) = image.shape[:2]
+    if( h > w ):
+        p = 256 / h
+    else:
+        p = 256 / w
+    
+    return scale * p
 
 def make_square(img, min_size=256, new_size=(256,256)):
     x, y, z = img.shape
@@ -70,7 +77,7 @@ def get_area_of_interest(img, show_images= False):
     mask = np.zeros(img_borders.shape, dtype = 'uint8')
     cv.drawContours(mask, [area_of_interest], -1, 255, -1)
 
-    show_img(mask, "Mask") if show_images else 1
+    #show_img(mask, "Mask") if show_images else 1
 
     return mask
 
@@ -245,7 +252,7 @@ def get_minimum_area(img, name_value = 'value'):
 
     return cropped
 
-def simpson_method(img):
+def simpson_method(img, scale, cuts = 3):
     """Calculates volume using Simpson Method, that consists in cropping the image in multiple rectangles and asume that are perfect cilinders
 
     Args:
@@ -257,30 +264,41 @@ def simpson_method(img):
     
     cropped = get_minimum_area(img, 'original')
     (h, w) = cropped.shape[:2]
-    
-    show_img(cropped, "cropped")
-
-    #print(f"width:{w} height:{h*_CENTIMETERS}")
-    evaluate_height = h // 24
-    #print(f"ev height:{evaluate_height*_CENTIMETERS}")
+    evaluate_height = cuts
     counter = evaluate_height
     actual_height = 0
     contador = 1
     img_cut_list = []
+    
+    # dynamic cut -> deprecated
+    # while( counter <= h ):
+    #     img_cut = np.zeros((evaluate_height+2,w+2,3),dtype="uint8")
+    #     img_cut[1:1+evaluate_height,1:1+w] = cropped[actual_height:counter,0:w]
+    #     cropped_min = get_minimum_area(img_cut)
+    #     show_img(cropped_min)
+    #     img_cut_list.append(cropped_min)
+    #     actual_height = counter
+    #     counter += evaluate_height
+    #     contador += 1
+
     while( counter <= h ):
+        #Si el resultado entre la altura máxima y el próximo corte es menor al contador fijo para cortar, se suman las cantidades y se corta para el resto total
+        if( 1 < h - actual_height % counter < 2 ):
+            counter = h
         img_cut = np.zeros((evaluate_height+2,w+2,3),dtype="uint8")
         img_cut[1:1+evaluate_height,1:1+w] = cropped[actual_height:counter,0:w]
         cropped_min = get_minimum_area(img_cut)
+        #show_img(cropped_min)
         img_cut_list.append(cropped_min)
         actual_height = counter
         counter += evaluate_height
         contador += 1
     
-    final_volume = calculate_cilinder_volume(img_cut_list, _CENTIMETERS)
+    final_volume = calculate_cilinder_volume(img_cut_list, scale)
     print(f"Ventricle volume: {final_volume} cm3")
     return final_volume
     
-def calculate_cilinder_volume(list_cilinders, centimeters):
+def calculate_cilinder_volume(list_cilinders, scale):
     """Calculates the volume of a cilinder
 
     Args:
@@ -294,8 +312,8 @@ def calculate_cilinder_volume(list_cilinders, centimeters):
     total_volume = 0
     for cil in list_cilinders:
         (h, w) = cil.shape[:2]
-        height = (h - 2)*centimeters 
-        width = (w - 2)*centimeters 
+        height = (h - 2) * scale
+        width = (w - 2) * scale
         total_volume = total_volume + height*(width/2)**2*math.pi
         counter += 1
     
@@ -331,6 +349,8 @@ def get_left_ventricle_walls(img, mask):
     
     #print("MASKING")
     masked_img = cv.bitwise_and(img, img, mask = inverted_mask)
+    #show_img(mask)
+    #show_img(masked_img,'final')
 
     #preventing margin overflow
     (height, width) = mask.shape[:2]
@@ -366,7 +386,7 @@ def get_minimum_areas(img, desired_amount):
 
     return list_of_cropped_images
 
-def calculate_wall_thickness(wall_cuts_list, centimeters):
+def calculate_wall_thickness(wall_cuts_list, scale):
     """Calculates the wall thickness of a ventricle
 
     Args:
@@ -384,7 +404,8 @@ def calculate_wall_thickness(wall_cuts_list, centimeters):
         i += 1
         (h, w) = wall_cut.shape[:2]
         #print(f'wall_cut pixel width: {w}')
-        width = w*centimeters
+        # TODO: Fede, Probar y agregar filtro de thickness altos y bajos
+        width = (w - 2) * scale
         #print(f"Calculating average wall thickness with thickness of : {width} centimeters")
         thickness_sum += width
     
@@ -392,8 +413,7 @@ def calculate_wall_thickness(wall_cuts_list, centimeters):
 
     return average_thickness
 
-
-def estimate_muscle_thickness(img, mask_in = 'nothing', show_images = False):
+def estimate_muscle_thickness(img, mask_in = 'nothing', scale = 1, show_images = False):
     """Estimates the thickness of the ventricle walls.
 
     Args:
@@ -416,12 +436,12 @@ def estimate_muscle_thickness(img, mask_in = 'nothing', show_images = False):
     print("GETTING WALLS")
     walls_img = get_left_ventricle_walls(img, mask)
 
-    show_img(walls_img, "walls_img") if show_images else -1
+    #show_img(walls_img, "walls_img")# if show_images else -1
 
     (h, w) = walls_img.shape[:2]
     
     #print(f"width:{w} height:{h}")
-    evaluate_height = h // 12
+    evaluate_height = h // 8
     #print(f"ev height:{evaluate_height}")
     counter = evaluate_height
     actual_height = 0
@@ -434,39 +454,30 @@ def estimate_muscle_thickness(img, mask_in = 'nothing', show_images = False):
         actual_height = counter
         counter+=evaluate_height
     
-    final_wall_thickness = calculate_wall_thickness(img_cut_list, 0.02)
+    final_wall_thickness = calculate_wall_thickness(img_cut_list, scale)
         
     return final_wall_thickness
     
-    
-def calculate_perimeter(img):
+#TODO Funciona un poquito mal
+def calculate_perimeter(img, scale):
    
-    #show_img(img,'original')
-    print("############################1111")
     # img = get_grays(img)
     cropped = get_minimum_area(img, 'original')
-    #show_img(cropped)
-    print("############################1111")
     mask_borders = get_img_borders_no_dil(cropped)
-    print("############################2222")
     cropped_conts, contours = get_img_contour(mask_borders) 
-    print("############################3333")
     #img_contours, max_contour = get_img_contour_max_area(mask_borders)
     #show_img(cropped_conts,"no max")
     #show_img(img_contours, "max area")
   
-    perimeter = 0 
+    perimeter_list = []
     for item in contours:
-        perimeter = cv.arcLength(item,True)
-        print(f"PERIMETER = {perimeter}")
+        perimeter_list.append(cv.arcLength(item,True))
     
+    perimeter = max(perimeter_list)
+    print(f"PERIMETER = {perimeter}")
     return perimeter
-        
-def estimate_atrium_area(img):
-    ###
-    return -1
 
-def estimate_ventricle_area(img):
+def estimate_ventricle_area(img, scale):
     """Estimates the area of an object
 
     Args:
@@ -475,7 +486,8 @@ def estimate_ventricle_area(img):
     cropped = get_minimum_area(img, 'original')
     mask_borders = get_img_borders_no_dil(cropped)
     cropped_conts, contours = get_img_contour(mask_borders)    
-    area = cv.contourArea(contours[0]) * _CENTIMETERS
+    # TODO: Fede
+    area = cv.contourArea(contours[0]) * (scale)**2
     return area
     
 def show_img(img, name = 'Heart'):
@@ -488,3 +500,45 @@ def show_img(img, name = 'Heart'):
     #print(f'Showing {name} image')
     cv.imshow(name, img)
     cv.waitKey(0)
+    
+def make_mask_video(img, mask):
+    
+    inverted_mask = cv.bitwise_not(mask)
+    
+    #getting cropping rectangle
+    
+   # print("GETTING BORDERS")
+    mask_borders = get_img_borders(mask)
+    
+    #print("GETTING CONTOURS")
+    mask_contours, max_contours = get_img_max_contours(mask_borders, 1)
+    x, y, w, h = cv.boundingRect(max_contours[0])
+
+    #applying mask to image
+    
+    #print("MASKING")
+    masked_img = cv.bitwise_and(img, img, mask = inverted_mask)
+    #show_img(masked_img)
+    
+def show_ordered_frames(list_frames, list_names):
+
+    counter = 1
+    cont = 0
+    total = len(list_frames)
+    tot = len(list_names) - 1
+    # resized_list = map(lambda frame: resize_frame(frame, 2), list)
+    resized_list = []
+    for frame in list_frames:
+        resized_list.append(resize_frame(frame, 2))
+    while True and cont < 150:
+        #print(f'Showing img {counter % total} of {total}')
+        if(list_names[cont%tot] > 100):
+            cv.imshow(f'Mask',resized_list[counter % total])
+            print(f"VOLUME FRAME: {str(round(list_names[cont%tot],2))} cm3")
+            if cv.waitKey(100) & 0xFF==ord('d'):
+                break
+        
+        counter += 1
+        cont += 1 
+
+    cv.destroyAllWindows()

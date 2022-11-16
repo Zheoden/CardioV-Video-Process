@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 import tensorflow as tf
-from process_functions.image_functions import make_square, show_img
+from process_functions.image_functions import make_square, show_img, get_grays
 
 def get_ventricle_mask(img, loaded_model):
     """Creates a mask using the AI model
@@ -10,15 +10,27 @@ def get_ventricle_mask(img, loaded_model):
         img (OpenCV Image): Image to get the mask
     """
 
-    # Reshaping the image
     img = make_square(img)
-
+        
+    img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     # Normalizing the image
     img = img * 1. / 255.
+    
     # Converting the image into array
     img = np.array(img, dtype=np.float64)
-
-    img = np.reshape(img, (256, 256, 3))
+    
+    try:
+        img = np.float32(img)
+        img = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
+    except Exception as e:
+        print("ERRROR::::")
+        print(e)
+    
+    try:
+        img = np.reshape(img, (256, 256, 3))
+    except Exception as e:
+        print("ERRROR::::")
+        print(e)
     # reshaping the image from 256,256,3 to 1,256,256,3
     img = np.reshape(img, (1, 256, 256, 3))
 
@@ -31,12 +43,9 @@ def get_ventricle_mask(img, loaded_model):
     axis = 0
     # image is your tensor
     tf.expand_dims(img, axis)
-
     # make prediction
     predict = loaded_model.predict(img)[0]
-
     predict_copy = (predict*255).astype(np.uint8)
-    # show_img(predict_copy,"predict_copy")
 
     # mask = np.asarray(predict_copy).squeeze().round()
     # show_img(mask,"mask")
