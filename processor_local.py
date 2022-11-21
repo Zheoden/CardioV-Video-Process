@@ -82,24 +82,30 @@ def process_video(path, file, model, original_scale = 1, show_images= False):
         
         try:
             video = imf.make_video(video_frames, file, mask_list, list_volume, TMP_DIR)
+            video_name = video.split('/')[-1]
         except Exception as error:
             print(f"ERROR: {error}")
             video = _ERROR_VALUE
+            video_name = 'ERROR'
             
         try:
             dias, sys = imf.get_max_vol_img(video_frames, file, mask_list, list_volume, TMP_DIR)
+            dias_name = dias.split('/')[-1]
+            sys_name = sys.split('/')[-1]
         except Exception as error:
             print(f"ERROR: {error}")
             dias = 'ERROR'
             sys = 'ERROR'
+            dias_name = 'ERROR'
+            sys_name = 'ERROR'
                 
         data_set = {"ventricle_volume": list_volume, 
                     "atrium_area": list_area1, 
                     "ventricle_area": list_area2, 
                     "muscle_thickness": list_muscle_t,
-                    "video_path": video,
-                    "img_1_path": dias,
-                    "img_2_path": sys}
+                    "video_name": video_name,
+                    "img_1_name": dias_name,
+                    "img_2_name": sys_name}
         
     except Exception as error:
         print(f"An excepetion {error} was raised")
@@ -107,9 +113,9 @@ def process_video(path, file, model, original_scale = 1, show_images= False):
                 "atrium_area": _ERROR_VALUE, 
                 "ventricle_area": _ERROR_VALUE, 
                 "muscle_thickness": _ERROR_VALUE,
-                "video_path": _ERROR_VALUE,
-                "img_1_path": _ERROR_VALUE,
-                "img_2_path": _ERROR_VALUE}
+                "video_name": _ERROR_VALUE,
+                "img_1_name": _ERROR_VALUE,
+                "img_2_name": _ERROR_VALUE}
         
         
         
@@ -168,17 +174,19 @@ def process_image(path, file, model, original_scale = 1, show_images = False):
         
     try:
         concat_path = imf.concat_and_write(img_to_process, mask, file, TMP_DIR)
+        concat_name = concat_path.split('/')[-1]
     except Exception as error:
         print(f"ERROR: {error}")
         concat_path = 'ERROR'
+        concat_name = 'ERROR'
     
     data_set = {"ventricle_volume": volume, 
                 "atrium_area": atrium_area, 
                 "ventricle_area": ventricle_area, 
                 "muscle_thickness": muscle_thickness,
-                "video_path": 'None',
-                "img_1_path": concat_path,
-                "img_2_path": 'None'}
+                "video_name": 'None',
+                "img_1_name": concat_name,
+                "img_2_name": 'None'}
     
     return data_set, concat_path
 
