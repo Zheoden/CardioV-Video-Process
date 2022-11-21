@@ -269,7 +269,6 @@ def simpson_method(img, scale, cuts = 3):
     actual_height = 0
     contador = 1
     img_cut_list = []
-    
     # dynamic cut -> deprecated
     # while( counter <= h ):
     #     img_cut = np.zeros((evaluate_height+2,w+2,3),dtype="uint8")
@@ -501,25 +500,108 @@ def show_img(img, name = 'Heart'):
     cv.imshow(name, img)
     cv.waitKey(0)
     
-def make_mask_video(img, mask):
+def make_masked_image(img, mask):
     
-    inverted_mask = cv.bitwise_not(mask)
+    fill_color = (0,255,0)
+    border_color = (0,200,200)
+    scale = 1.25
+    contour_thickness = 0    
+    x, y = img.shape[:2]
+    reshape = ( int(x*scale), int(y*scale))
+    #print(reshape)
     
-    #getting cropping rectangle
-    
-   # print("GETTING BORDERS")
-    mask_borders = get_img_borders(mask)
-    
-    #print("GETTING CONTOURS")
-    mask_contours, max_contours = get_img_max_contours(mask_borders, 1)
-    x, y, w, h = cv.boundingRect(max_contours[0])
+    mask_borders = get_img_borders_no_dil(mask)
+    img_aux = img.copy()
+    back = img.copy()
+    blank, max_contour = get_img_contour_max_area(mask_borders)
+    cv.drawContours(img_aux, [max_contour], 0, fill_color, -1)
+    alpha = 0.65
+    result = cv.addWeighted(img_aux, 1-alpha, back, alpha, 0)
+    cv.drawContours(result, [max_contour], 0, border_color, contour_thickness)
+    result = cv.resize(result, reshape)
 
-    #applying mask to image
+    return result
+
+
+def concatenate_images_horizontaly(left_image, right_image):
+    scale = 1.25  
+    x, y = left_image.shape[:2]
+    reshape = ( int(x*scale), int(y*scale))
+    left_image = cv.resize(left_image, reshape)
+    hori = np.concatenate((left_image, right_image), axis=1)
+    return hori
+
+def make_video(img_list, file_name, mask_list, volume_list, tmp_dir):
     
-    #print("MASKING")
-    masked_img = cv.bitwise_and(img, img, mask = inverted_mask)
-    #show_img(masked_img)
+    final_images = []
+
+    for img, mask, volume in zip(img_list, mask_list, volume_list):
+        try:
+            masked_image = make_masked_image(img, mask)
+            (h, w) = masked_image.shape[:2]
+            cv.putText(masked_image, "VI Vol: " + str(round(volume, 2)), ( 20, 20 ), cv.FONT_HERSHEY_COMPLEX, 0.3, (0,200,200), 1)
+            final_images.append(masked_image)
+        except:
+            print('Unable to make mask for frame')
     
+    try:   
+        size = final_images[0].shape[:2]
+        out = cv.VideoWriter(tmp_dir + 'mask_' + file_name, cv.VideoWriter_fourcc(*'DIVX'), 15, size)
+        for i in final_images:
+            out.write(i)
+        
+        out.release()
+        result = True
+    except Exception as error:
+        print(f"Error while making video: {error}")
+        result = False
+    
+    final_dir = tmp_dir + 'mask_' + file_name if result else 'ERROR'
+    return final_dir
+    
+def get_max_vol_img(list_img, file_name, mask_list, volume_list, tmp_dir):
+    
+    # Diastole
+    max_vol = max(volume_list)
+    max_index = volume_list.index(max_vol)
+    
+    dias_img = list_img[max_index]
+    dias_mask = mask_list[max_index]
+
+    dias_masked_image = make_masked_image(dias_img, dias_mask)
+
+    # Sistole
+    min_vol = min(volume_list)
+    min_index = volume_list.index(min_vol)
+    
+    sys_img = list_img[min_index]
+    sys_mask = mask_list[max_index]
+
+    sys_masked_image = make_masked_image(sys_img, sys_mask)
+    
+    dias = concatenate_images_horizontaly(dias_img, dias_masked_image)
+    sys = concatenate_images_horizontaly(sys_img, sys_masked_image)
+    
+    dias_path = tmp_dir + 'dias_' + file_name.split('.')[0] + '.jpg'
+    sys_path = tmp_dir + 'sys_' + file_name.split('.')[0] + '.jpg'
+    
+    cv.imwrite(filename= dias_path, img = dias)
+    cv.imwrite(filename= sys_path, img = sys)
+    
+    return dias_path, sys_path
+
+def concat_and_write(img, mask, file_name, tmp_dir):
+    
+    masked_image = make_masked_image(img, mask)
+
+    concat = concatenate_images_horizontaly(img, masked_image)
+    
+    concat_path = tmp_dir + 'concat_' + file_name.split('.')[0] + '.jpg'
+    
+    cv.imwrite(filename= concat_path, img = concat)
+
+    return concat_path
+
 def show_ordered_frames(list_frames, list_names):
 
     counter = 1

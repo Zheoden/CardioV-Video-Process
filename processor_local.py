@@ -12,8 +12,9 @@ _CENTIMETERS = 1
 _ERROR_VALUE = -1
 _VOLUME_LIST = [180, 190, 200, 201, 202, 199, 182]
 MASK = "C:/Users/matia/cardiov/mask_test1.png"
+TMP_DIR = 'D:/'
 
-def process_video(path, model, original_scale = 1, show_images= False):
+def process_video(path, file, model, original_scale = 1, show_images= False):
     
     try:
         vid = cv.VideoCapture(path)
@@ -52,7 +53,7 @@ def process_video(path, model, original_scale = 1, show_images= False):
         for img, mask in zip(video_frames, mask_list):
             # imf.show_img(mask, "mask")
             try:
-                list_volume.append(imf.simpson_method(mask, scale))
+                list_volume.append(round(imf.simpson_method(mask, scale),2))
                 # list_volume.append(_ERROR_VALUE)
             except Exception as error:
                 print(f"Error {error} while trying to retreive ventricle volume")
@@ -78,24 +79,45 @@ def process_video(path, model, original_scale = 1, show_images= False):
             except Exception as error:
                 print(f"Error {error} while trying to retreive muscle thickness")
                 list_muscle_t.append(_ERROR_VALUE)
+        
+        try:
+            video = imf.make_video(video_frames, file, mask_list, list_volume, TMP_DIR)
+        except Exception as error:
+            print(f"ERROR: {error}")
+            video = _ERROR_VALUE
+            
+        try:
+            dias, sys = imf.get_max_vol_img(video_frames, file, mask_list, list_volume, TMP_DIR)
+        except Exception as error:
+            print(f"ERROR: {error}")
+            dias = 'ERROR'
+            sys = 'ERROR'
                 
         data_set = {"ventricle_volume": list_volume, 
                     "atrium_area": list_area1, 
                     "ventricle_area": list_area2, 
-                    "muscle_thickness": list_muscle_t}
+                    "muscle_thickness": list_muscle_t,
+                    "video_path": video,
+                    "img_1_path": dias,
+                    "img_2_path": sys}
+        
     except Exception as error:
         print(f"An excepetion {error} was raised")
         data_set = {"ventricle_volume": _ERROR_VALUE, 
-                    "atrium_area": _ERROR_VALUE,
-                    "ventricle_area": _ERROR_VALUE,
-                    "muscle_thickness": _ERROR_VALUE}
+                "atrium_area": _ERROR_VALUE, 
+                "ventricle_area": _ERROR_VALUE, 
+                "muscle_thickness": _ERROR_VALUE,
+                "video_path": _ERROR_VALUE,
+                "img_1_path": _ERROR_VALUE,
+                "img_2_path": _ERROR_VALUE}
+        
+        
         
     #imf.show_ordered_frames(mask_list,list_volume)
-        
-    return data_set
+    return data_set, video, dias, sys
     
 
-def process_image(path, model, original_scale = 1, show_images = False):
+def process_image(path, file, model, original_scale = 1, show_images = False):
     
     print('Initializing img processing for path:')
     print(path)
@@ -105,8 +127,6 @@ def process_image(path, model, original_scale = 1, show_images = False):
         mask = sg.get_ventricle_mask(img_to_process, model) # replace with img when segmentation is finished
         #mask = img_to_process
         img_to_process = imf.make_square(img_to_process)
-        imf.show_img(mask, "mascara")
-        imf.show_img(img_to_process)
     except:
         raise Exception("Unable to get the mask, aborting")
     
@@ -119,15 +139,15 @@ def process_image(path, model, original_scale = 1, show_images = False):
     #imf.show_img(mask, "result!")
 
     try:
-        volume = imf.simpson_method(mask, scale)
+        volume = round(imf.simpson_method(mask, scale),2)
         # volume = _ERROR_VALUE
     except Exception as error:
         print(f"Error {error} while trying to retreive ventricle volume")
         volume = _ERROR_VALUE
     
     try:
-        atrium_area = imf.calculate_perimeter(mask, scale)
-        # atrium_area = _ERROR_VALUE
+        #atrium_area = imf.calculate_perimeter(mask, scale)
+        atrium_area = _ERROR_VALUE
     except Exception as error:
         print(f"Error {error} while trying to retreive atrium area")
         atrium_area = _ERROR_VALUE
@@ -145,15 +165,22 @@ def process_image(path, model, original_scale = 1, show_images = False):
     except Exception as error:
         print(f"Error {error} while trying to retreive muscle thickness")
         muscle_thickness = _ERROR_VALUE
+        
+    try:
+        concat_path = imf.concat_and_write(img_to_process, mask, file, TMP_DIR)
+    except Exception as error:
+        print(f"ERROR: {error}")
+        concat_path = 'ERROR'
     
     data_set = {"ventricle_volume": volume, 
                 "atrium_area": atrium_area, 
                 "ventricle_area": ventricle_area, 
-                "muscle_thickness": muscle_thickness}
+                "muscle_thickness": muscle_thickness,
+                "video_path": 'None',
+                "img_1_path": concat_path,
+                "img_2_path": 'None'}
     
-    #imf.make_mask_video(img_to_process, mask)
-    
-    return data_set
+    return data_set, concat_path
 
 
 def make_a_graph():

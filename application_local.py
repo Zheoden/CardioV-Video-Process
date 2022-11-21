@@ -12,7 +12,13 @@ root_directory3 = "C:\\Users\\matia\\cardiov\\muestra3.avi"
 root_directory4 = "C:\\Users\\matia\\cardiov\\muestra4.avi"
 root_directory5 = "C:\\Users\\matia\\cardiov\\test_img2.jpg"
 root_directory6 = "C:\\Users\\matia\\cardiov\\bend.jpg" 
-root_directory7 = "C:\\Users\\matia\\cardiov\\bens.jpg" 
+root_directory7 = "C:\\Users\\matia\\cardiov\\muestra4.jpg" 
+
+
+s3_client = boto3.client('s3',
+                    aws_access_key_id= 'AKIA4BMMFY4ZGPTTZ556',
+                    aws_secret_access_key= '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')
+s3_bucket_name = 'cardiov-assets'
 
 
 loaded_model = ml.cargarModelo()
@@ -48,10 +54,19 @@ def get_heart_values():
         
     
     if type == 'i':
-        val = pc.process_image(path= path, model = loaded_model)
+        val, img_path = pc.process_image(path= path, file = file, model = loaded_model)
+        img_name = img_path.split("/")[-1]
+        s3_client.upload_file(img_path, s3_bucket_name, img_name)
     else:
-        val = pc.process_video(path= path, model = loaded_model)
-    
+        val, video_path, dias_path, sys_path = pc.process_video(path= path, file = file,  model = loaded_model)
+        video_name = video_path.split("/")[-1]
+        dias_name = dias_path.split("/")[-1]
+        sys_name = sys_path.split("/")[-1]
+        s3_client.upload_file(video_path, s3_bucket_name, video_name)
+        s3_client.upload_file(dias_path, s3_bucket_name, dias_name)
+        s3_client.upload_file(sys_path, s3_bucket_name, sys_name)
+        
+        print(val)
     return val
 
 @application.route('/showGraph')

@@ -29,9 +29,17 @@ def get_heart_values():
     type = request.args.get('type')
     
     if type == 'i':
-        val = pc.process_image(url= url, model = loaded_model)
+        val, img_path = pc.process_image(url= url, file = file, model = loaded_model)
+        img_name = img_path.split("/")[-1]
+        s3_client.upload_file(img_path, s3_bucket_name, img_name)
     else:
-        val = pc.process_video(url= url, model = loaded_model)
+        val, video_path, dias_path, sys_path = pc.process_video(url= url, file = file,  model = loaded_model)
+        video_name = video_path.split("/")[-1]
+        dias_name = dias_path.split("/")[-1]
+        sys_name = sys_path.split("/")[-1]
+        s3_client.upload_file(video_path, s3_bucket_name, video_name)
+        s3_client.upload_file(dias_path, s3_bucket_name, dias_name)
+        s3_client.upload_file(sys_path, s3_bucket_name, sys_name)
     
     return val
 
