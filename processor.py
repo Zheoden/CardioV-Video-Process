@@ -94,24 +94,40 @@ def process_video(url, file, model, original_scale = 1, show_images= False):
             sys = 'ERROR'
             dias_name = 'ERROR'
             sys_name = 'ERROR'
-                 
+
+        media = [] 
+        media.append((video_name,'Video con máscaras'))
+        media.append((dias_name,'Máscara de diástole'))
+        media.append((sys_name,'Máscara de sístole'))
+
+        # data_set = {"ventricle_volume": list_volume, 
+        #             "atrium_area": list_area1, 
+        #             "ventricle_area": list_area2, 
+        #             "muscle_thickness": list_muscle_t,
+        #             "video_name": video_name,
+        #             "img_1_name": dias_name,
+        #             "img_2_name": sys_name}
         data_set = {"ventricle_volume": list_volume, 
                     "atrium_area": list_area1, 
                     "ventricle_area": list_area2, 
                     "muscle_thickness": list_muscle_t,
-                    "video_name": video_name,
-                    "img_1_name": dias_name,
-                    "img_2_name": sys_name}
+                    "media": media}
         
     except Exception as error:
         print(f"An excepetion {error} was raised")
+        # data_set = {"ventricle_volume": _ERROR_VALUE, 
+        #         "atrium_area": _ERROR_VALUE, 
+        #         "ventricle_area": _ERROR_VALUE, 
+        #         "muscle_thickness": _ERROR_VALUE,
+        #         "video_name": _ERROR_VALUE,
+        #         "img_1_name": _ERROR_VALUE,
+        #         "img_2_name": _ERROR_VALUE}
+
         data_set = {"ventricle_volume": _ERROR_VALUE, 
-                "atrium_area": _ERROR_VALUE, 
-                "ventricle_area": _ERROR_VALUE, 
-                "muscle_thickness": _ERROR_VALUE,
-                "video_name": _ERROR_VALUE,
-                "img_1_name": _ERROR_VALUE,
-                "img_2_name": _ERROR_VALUE}
+                    "atrium_area": _ERROR_VALUE, 
+                    "ventricle_area": _ERROR_VALUE, 
+                    "muscle_thickness": _ERROR_VALUE,
+                    "media": _ERROR_VALUE}
         
     #imf.show_ordered_frames(mask_list,list_volume)
         
@@ -178,12 +194,20 @@ def process_image(url, file, model, original_scale = 1, show_images = False):
         concat_path = 'ERROR'
         img_name = 'ERROR'
 
+    media = [] 
+    media.append((img_name,'Máscara'))
+
+    # data_set = {"ventricle_volume": list_volume, 
+    #             "atrium_area": list_area1, 
+    #             "ventricle_area": list_area2, 
+    #             "muscle_thickness": list_muscle_t,
+    #             "video_name": 'None',
+    #             "img_1_name": img_name,
+    #             "img_2_name": 'None'}
     data_set = {"ventricle_volume": list_volume, 
                 "atrium_area": list_area1, 
                 "ventricle_area": list_area2, 
                 "muscle_thickness": list_muscle_t,
-                "video_name": 'None',
-                "img_1_name": img_name,
-                "img_2_name": 'None'}
+                "media": media}
     
     return data_set, concat_path

@@ -12,7 +12,8 @@ _CENTIMETERS = 1
 _ERROR_VALUE = -1
 _VOLUME_LIST = [180, 190, 200, 201, 202, 199, 182]
 MASK = "C:/Users/matia/cardiov/mask_test1.png"
-TMP_DIR = 'D:/'
+# TMP_DIR = 'D:/'
+TMP_DIR = 'C:/Users/fedeb/OneDrive/Escritorio/TMP'
 
 def process_video(path, file, model, original_scale = 1, show_images= False):
     
@@ -98,24 +99,41 @@ def process_video(path, file, model, original_scale = 1, show_images= False):
             sys = 'ERROR'
             dias_name = 'ERROR'
             sys_name = 'ERROR'
+
+        media = [] 
+        media.append((video_name,'Video con máscaras'))
+        media.append((dias_name,'Máscara de diástole'))
+        media.append((sys_name,'Máscara de sístole'))
                 
+        # data_set = {"ventricle_volume": list_volume, 
+        #             "atrium_area": list_area1, 
+        #             "ventricle_area": list_area2, 
+        #             "muscle_thickness": list_muscle_t,
+        #             "video_name": video_name,
+        #             "img_1_name": dias_name,
+        #             "img_2_name": sys_name}
+
         data_set = {"ventricle_volume": list_volume, 
-                    "atrium_area": list_area1, 
-                    "ventricle_area": list_area2, 
-                    "muscle_thickness": list_muscle_t,
-                    "video_name": video_name,
-                    "img_1_name": dias_name,
-                    "img_2_name": sys_name}
+            "atrium_area": list_area1, 
+            "ventricle_area": list_area2, 
+            "muscle_thickness": list_muscle_t,
+            "media": media}
         
     except Exception as error:
         print(f"An excepetion {error} was raised")
+        # data_set = {"ventricle_volume": _ERROR_VALUE, 
+        #         "atrium_area": _ERROR_VALUE, 
+        #         "ventricle_area": _ERROR_VALUE, 
+        #         "muscle_thickness": _ERROR_VALUE,
+        #         "video_name": _ERROR_VALUE,
+        #         "img_1_name": _ERROR_VALUE,
+        #         "img_2_name": _ERROR_VALUE}
+
         data_set = {"ventricle_volume": _ERROR_VALUE, 
-                "atrium_area": _ERROR_VALUE, 
-                "ventricle_area": _ERROR_VALUE, 
-                "muscle_thickness": _ERROR_VALUE,
-                "video_name": _ERROR_VALUE,
-                "img_1_name": _ERROR_VALUE,
-                "img_2_name": _ERROR_VALUE}
+            "atrium_area": _ERROR_VALUE, 
+            "ventricle_area": _ERROR_VALUE, 
+            "muscle_thickness": _ERROR_VALUE,
+            "media": _ERROR_VALUE}
         
         
         
@@ -166,12 +184,12 @@ def process_image(path, file, model, original_scale = 1, show_images = False):
         ventricle_area = _ERROR_VALUE
     
     try:
-        #muscle_thickness = imf.estimate_muscle_thickness(img_to_process, mask, scale)
-        muscle_thickness = _ERROR_VALUE
+        muscle_thickness = imf.estimate_muscle_thickness(img_to_process, mask, scale)
+        # muscle_thickness = _ERROR_VALUE
     except Exception as error:
         print(f"Error {error} while trying to retreive muscle thickness")
         muscle_thickness = _ERROR_VALUE
-        
+
     try:
         concat_path = imf.concat_and_write(img_to_process, mask, file, TMP_DIR)
         concat_name = concat_path.split('/')[-1]
@@ -179,14 +197,22 @@ def process_image(path, file, model, original_scale = 1, show_images = False):
         print(f"ERROR: {error}")
         concat_path = 'ERROR'
         concat_name = 'ERROR'
+
+    media = [] 
+    media.append((concat_name,'Máscara'))
     
+    # data_set = {"ventricle_volume": volume, 
+    #             "atrium_area": atrium_area, 
+    #             "ventricle_area": ventricle_area, 
+    #             "muscle_thickness": muscle_thickness,
+    #             "video_name": 'None',
+    #             "img_1_name": concat_name,
+    #             "img_2_name": 'None'}
     data_set = {"ventricle_volume": volume, 
                 "atrium_area": atrium_area, 
                 "ventricle_area": ventricle_area, 
                 "muscle_thickness": muscle_thickness,
-                "video_name": 'None',
-                "img_1_name": concat_name,
-                "img_2_name": 'None'}
+                "media": media}
     
     return data_set, concat_path
 

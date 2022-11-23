@@ -395,20 +395,29 @@ def calculate_wall_thickness(wall_cuts_list, scale):
     Returns:
         Float: Average muscle thickness
     """
-    amount_of_cuts = len(wall_cuts_list)
-    thickness_sum = 0
 
-    i = 0
+    # getting widths
+    width_list = []
     for wall_cut in wall_cuts_list:
-        i += 1
         (h, w) = wall_cut.shape[:2]
-        #print(f'wall_cut pixel width: {w}')
-        # TODO: Fede, Probar y agregar filtro de thickness altos y bajos
         width = (w - 2) * scale
-        #print(f"Calculating average wall thickness with thickness of : {width} centimeters")
-        thickness_sum += width
+        width_list.append(width)
     
-    average_thickness = thickness_sum / amount_of_cuts
+    # filtering
+    max_width = max(width_list)
+    min_width = min(width_list)
+    dif = max_width - min_width
+    lower_limit = min_width + dif * 0.05
+    higher_limit = max_width - dif * 0.05
+    filtered_widths = list(filter(lambda width: lower_limit < width < higher_limit , width_list))
+
+    # print(f'CALCULATING WALLS WIDTH.  LOWER_LIMIT: {lower_limit} - HIGHER_LIMIT: {higher_limit}')
+    # print(f'Max: {max_width} - Min: {min_width} - Dif: {dif}')
+    # print(f'WIDTH_LIST: {width_list}')
+    # print(f'FILTERED_WIDTHS: {filtered_widths}')
+
+    # calculating
+    average_thickness = sum(filtered_widths) / len(filtered_widths)
 
     return average_thickness
 
