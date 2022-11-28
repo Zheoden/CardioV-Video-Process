@@ -13,7 +13,7 @@ def rescale(image, scale):
     else:
         p = 256 / w
     
-    return scale * p
+    return float(scale) * p
 
 def make_square(img, min_size=256, new_size=(256,256)):
     x, y, z = img.shape
@@ -247,7 +247,6 @@ def get_minimum_area(img, name_value = 'value'):
     
     img_borders = get_img_borders_no_dil(img)
     img_contours, max_contour = get_img_contour_max_area(img_borders)
-    #show_img(img_contours, "CONTOUR")
     x, y, w, h = cv.boundingRect(max_contour)
     cropped = img[y:y+h,x:x+w]
 
@@ -288,13 +287,13 @@ def simpson_method(img, scale, cuts = 3):
         img_cut = np.zeros((evaluate_height+2,w+2,3),dtype="uint8")
         img_cut[1:1+evaluate_height,1:1+w] = cropped[actual_height:counter,0:w]
         cropped_min = get_minimum_area(img_cut)
-        #show_img(cropped_min)
         img_cut_list.append(cropped_min)
         actual_height = counter
         counter += evaluate_height
         contador += 1
     
     final_volume = calculate_cilinder_volume(img_cut_list, scale)
+    
     print(f"Ventricle volume: {final_volume} cm3")
     return final_volume
     
@@ -312,8 +311,8 @@ def calculate_cilinder_volume(list_cilinders, scale):
     total_volume = 0
     for cil in list_cilinders:
         (h, w) = cil.shape[:2]
-        height = (h - 2) * scale
-        width = (w - 2) * scale
+        height = (h - 2) / scale
+        width = (w - 2) / scale
         total_volume = total_volume + height*(width/2)**2*math.pi
         counter += 1
     
@@ -401,7 +400,7 @@ def calculate_wall_thickness(wall_cuts_list, scale):
     width_list = []
     for wall_cut in wall_cuts_list:
         (h, w) = wall_cut.shape[:2]
-        width = (w - 2) * scale
+        width = (w - 2) / scale
         width_list.append(width)
     
     # filtering
@@ -470,13 +469,13 @@ def estimate_muscle_thickness(img, mask_in = 'nothing', scale = 1, show_images =
 #TODO Funciona un poquito mal
 def calculate_perimeter(img, scale):
    
-    # img = get_grays(img)
     cropped = get_minimum_area(img, 'original')
-    mask_borders = get_img_borders_no_dil(cropped)
-    cropped_conts, contours = get_img_contour(mask_borders) 
-    #img_contours, max_contour = get_img_contour_max_area(mask_borders)
-    #show_img(cropped_conts,"no max")
-    #show_img(img_contours, "max area")
+    (x, y) = cropped.shape[:2]
+    blank = np.zeros((x+2,y+2,3), dtype="uint8")
+    blank[1:1+x,1:1+y] = cropped[0:x,0:y]
+    mask_borders = get_img_borders_no_dil(blank)
+    cropped_conts, contours = get_img_contour(mask_borders)  
+    
   
     perimeter_list = []
     for item in contours:
@@ -484,7 +483,7 @@ def calculate_perimeter(img, scale):
     
     perimeter = max(perimeter_list)
     print(f"PERIMETER = {perimeter}")
-    return perimeter
+    return perimeter / scale
 
 def estimate_ventricle_area(img, scale):
     """Estimates the area of an object
@@ -492,12 +491,20 @@ def estimate_ventricle_area(img, scale):
     Args:
         img (OpenCV image): image to estimate area
     """
+
     cropped = get_minimum_area(img, 'original')
-    mask_borders = get_img_borders_no_dil(cropped)
-    cropped_conts, contours = get_img_contour(mask_borders)    
-    # TODO: Fede
-    area = cv.contourArea(contours[0]) * (scale)**2
-    return area
+    (x, y) = cropped.shape[:2]
+    blank = np.zeros((x+2,y+2,3), dtype="uint8")
+    blank[1:1+x,1:1+y] = cropped[0:x,0:y]
+    mask_borders = get_img_borders_no_dil(blank)
+    cropped_conts, contours = get_img_contour(mask_borders) 
+    list_areas = []
+    for item in contours:
+        area = cv.contourArea(item) / (scale)**2
+        list_areas.append(area)
+    
+    final_area = max(list_areas)    
+    return final_area
     
 def show_img(img, name = 'Heart'):
     """Show image wrapper

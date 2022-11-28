@@ -56,7 +56,7 @@ def process_video(url, file, model, original_scale = 1, show_images= False):
                 list_volume.append(_ERROR_VALUE)
             
             try:
-                list_perimeter.append(round(imf.calculate_perimeter(img, scale), 2))
+                list_perimeter.append(round(imf.calculate_perimeter(mask, scale), 2))
                 # list_perimeter.append(_ERROR_VALUE)
             except Exception as error:
                 print(f"Error {error} while trying to retreive ventricle perimeter")
@@ -141,7 +141,7 @@ def process_image(url, file, model, original_scale = 1, show_images = False):
     
     try:
         mask = sg.get_ventricle_mask(img_to_process, model) # replace with img when segmentation is finished
-        img_to_process = imf.make_square(img_to_process)
+        # img_to_process = imf.make_square(img_to_process)
     except:
         raise Exception("Unable to get the mask, aborting")
     
@@ -150,6 +150,8 @@ def process_image(url, file, model, original_scale = 1, show_images = False):
     except:
         print("Unable to get the scale, setting to default: 1")
         scale = 1
+
+    img_to_process = imf.make_square(img_to_process)
 
     try:
         list_volume.append(round(imf.simpson_method(mask, scale),2))

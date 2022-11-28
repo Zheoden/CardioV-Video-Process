@@ -6,13 +6,19 @@ import os
 from process_functions import model_loader as ml
 
 application = Flask(__name__)
-root_directory = "C:\\Users\\matia\\cardiov\\example_video2.mp4"
-root_directory2 = "C:\\Users\\matia\\cardiov\\muestra_2.mp4"
-root_directory3 = "C:\\Users\\matia\\cardiov\\muestra3.avi"
-root_directory4 = "C:\\Users\\matia\\cardiov\\muestra4.avi"
-root_directory5 = "C:\\Users\\matia\\cardiov\\test_img2.jpg"
-root_directory6 = "C:\\Users\\matia\\cardiov\\bend.jpg" 
-root_directory7 = "C:\\Users\\matia\\cardiov\\muestra4.jpg" 
+root_directory = "C:\\Users\\matia\\cardiov\\muestra_hugo.avi"
+root_directory2 = "C:\\Users\\matia\\cardiov\\muestra_juan.avi"
+root_directory3 = "C:\\Users\\matia\\cardiov\\muestra_walter.avi"
+root_directory4 = "C:\\Users\\matia\\cardiov\\muestra_castro5.avi"
+root_directory5 = "C:\\Users\\matia\\cardiov\\muestra_fagundez.avi"
+root_directory6 = "C:\\Users\\matia\\cardiov\\dias_juan.jpg" 
+root_directory7 = "C:\\Users\\matia\\cardiov\\sys_juan.jpg" 
+root_directory8 = "C:\\Users\\matia\\cardiov\\dias_walter.jpg" 
+root_directory9 = "C:\\Users\\matia\\cardiov\\sys_walter.jpg" 
+root_directory10 = "C:\\Users\\matia\\cardiov\\dias_castro.jpg" 
+root_directory11 = "C:\\Users\\matia\\cardiov\\sys_castro.jpg" 
+root_directory12 = "C:\\Users\\matia\\cardiov\\dias_hugo.jpg" 
+root_directory13 = "C:\\Users\\matia\\cardiov\\sys_hugo.jpg" 
 
 
 s3_client = boto3.client('s3',
@@ -51,6 +57,18 @@ def get_heart_values():
         path = root_directory6
     elif (num == '7'):
         path = root_directory7
+    elif (num == '8'):
+        path = root_directory8
+    elif (num == '9'):
+        path = root_directory9
+    elif (num == '10'):
+        path = root_directory10
+    elif (num == '11'):
+        path = root_directory11
+    elif (num == '12'):
+        path = root_directory12
+    elif (num == '13'):
+        path = root_directory13
     
     scale = request.args.get('e')
     
@@ -67,7 +85,7 @@ def get_heart_values():
         dias_name = dias_path.split("/")[-1]
         sys_name = sys_path.split("/")[-1]
         
-        s3_client.upload_file(video_path, s3_bucket_name, video_name, ExtraArgs={'ACL':'public-read'})
+        #s3_client.upload_file(video_path, s3_bucket_name, video_name, ExtraArgs={'ACL':'public-read'})
         #s3_client.upload_file(dias_path, s3_bucket_name, dias_name, ExtraArgs={'ACL':'public-read'})
         #s3_client.upload_file(sys_path, s3_bucket_name, sys_name, ExtraArgs={'ACL':'public-read'})
         os.remove(video_path) if os.path.isfile(video_path) else print("No video to be deleted!")
@@ -83,4 +101,4 @@ def show_graph():
 
 
 if __name__ == '__main__':
-    application.run(debug= True, port= 4000)
+    application.run(debug= False, port= 4000)
