@@ -6,8 +6,8 @@ import os
 from process_functions import model_loader as ml
 
 application = Flask(__name__)
-root_directory = "C:\\Users\\matia\\cardiov\\muestra.avi"
-root_directory2 = "C:\\Users\\matia\\cardiov\\muestra2.avi"
+root_directory = "C:\\Users\\matia\\cardiov\\example_video2.mp4"
+root_directory2 = "C:\\Users\\matia\\cardiov\\muestra_2.mp4"
 root_directory3 = "C:\\Users\\matia\\cardiov\\muestra3.avi"
 root_directory4 = "C:\\Users\\matia\\cardiov\\muestra4.avi"
 root_directory5 = "C:\\Users\\matia\\cardiov\\test_img2.jpg"
@@ -51,22 +51,29 @@ def get_heart_values():
         path = root_directory6
     elif (num == '7'):
         path = root_directory7
-        
+    
+    scale = request.args.get('e')
+    
+    scale = 1 if scale == None else scale 
+    print(f"SCALE : {scale}")
     
     if type == 'i':
-        val, img_path = pc.process_image(path= path, file = file, model = loaded_model)
+        val, img_path = pc.process_image(path= path, file = file, original_scale=scale, model = loaded_model)
         img_name = img_path.split("/")[-1]
         s3_client.upload_file(img_path, s3_bucket_name, img_name)
     else:
-        val, video_path, dias_path, sys_path = pc.process_video(path= path, file = file,  model = loaded_model)
+        val, video_path, dias_path, sys_path = pc.process_video(path= path, file = file, original_scale=scale, model = loaded_model)
         video_name = video_path.split("/")[-1]
         dias_name = dias_path.split("/")[-1]
         sys_name = sys_path.split("/")[-1]
-        s3_client.upload_file(video_path, s3_bucket_name, video_name)
-        s3_client.upload_file(dias_path, s3_bucket_name, dias_name)
-        s3_client.upload_file(sys_path, s3_bucket_name, sys_name)
         
-        print(val)
+        s3_client.upload_file(video_path, s3_bucket_name, video_name, ExtraArgs={'ACL':'public-read'})
+        #s3_client.upload_file(dias_path, s3_bucket_name, dias_name, ExtraArgs={'ACL':'public-read'})
+        #s3_client.upload_file(sys_path, s3_bucket_name, sys_name, ExtraArgs={'ACL':'public-read'})
+        os.remove(video_path) if os.path.isfile(video_path) else print("No video to be deleted!")
+        os.remove(dias_path) if os.path.isfile(dias_path) else print("No dias to be deleted!")
+        os.remove(sys_path) if os.path.isfile(sys_path) else print("No sys to be deleted!")
+
     return val
 
 @application.route('/showGraph')

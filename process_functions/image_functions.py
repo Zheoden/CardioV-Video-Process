@@ -3,6 +3,7 @@ import numpy as np
 import cv2 as cv
 import math
 from PIL import Image
+import imageio as imio
 
 def rescale(image, scale):
 
@@ -554,18 +555,29 @@ def make_video(img_list, file_name, mask_list, volume_list, tmp_dir):
             print('Unable to make mask for frame')
     
     try:   
-        size = final_images[0].shape[:2]
-        out = cv.VideoWriter(tmp_dir + 'mask_' + file_name, cv.VideoWriter_fourcc(*'DIVX'), 15, size)
-        for i in final_images:
-            out.write(i)
+        #size = final_images[0].shape[:2]
+        #video_format = '.mp4'
+        #file_renamed = file_name.split('.')[0] + video_format
         
-        out.release()
+        #out = cv.VideoWriter(tmp_dir + 'mask_' + file_renamed, -1, 15, size)
+        #for i in final_images:
+        #    out.write(i)
+        
+        #out.release()
+        #result = True
+          
+        video_format = '.gif'
+        file_renamed = file_name.split('.')[0] + video_format
+        full_path = tmp_dir + 'mask_' + file_renamed
+        
+        imio.mimsave(full_path, final_images, fps=60)
         result = True
+        
     except Exception as error:
         print(f"Error while making video: {error}")
         result = False
     
-    final_dir = tmp_dir + 'mask_' + file_name if result else 'ERROR'
+    final_dir = tmp_dir + 'mask_' + file_renamed if result else 'ERROR'
     return final_dir
     
 def get_max_vol_img(list_img, file_name, mask_list, volume_list, tmp_dir):
@@ -598,6 +610,13 @@ def get_max_vol_img(list_img, file_name, mask_list, volume_list, tmp_dir):
     cv.imwrite(filename= sys_path, img = sys)
     
     return dias_path, sys_path
+
+def calculate_ef(volume_list):
+    fdv = max(volume_list)
+    fsv = min(volume_list)
+    ef = ((fdv-fsv)/fdv)*100
+    
+    return round(ef,2)
 
 def concat_and_write(img, mask, file_name, tmp_dir):
     
