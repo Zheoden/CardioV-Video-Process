@@ -44,34 +44,33 @@ def process_video(url, file, model, original_scale = 1, show_images= False):
         vid.release()
         
         list_volume = []
-        list_area1 = []
-        list_area2 = []
+        list_perimeter = []
+        list_area = []
         list_muscle_t = []
         for img, mask in zip(video_frames, mask_list):
             # imf.show_img(mask, "mask")
             try:
                 list_volume.append(round(imf.simpson_method(mask, scale),2))
-                # list_volume.append(_ERROR_VALUE)
             except Exception as error:
                 print(f"Error {error} while trying to retreive ventricle volume")
                 list_volume.append(_ERROR_VALUE)
             
             try:
-                list_area1.append(imf.calculate_perimeter(img, scale))
-                # list_area1.append(_ERROR_VALUE)
+                list_perimeter.append(round(imf.calculate_perimeter(img, scale), 2))
+                # list_perimeter.append(_ERROR_VALUE)
             except Exception as error:
-                print(f"Error {error} while trying to retreive atrium area")
-                list_area1.append(_ERROR_VALUE)
+                print(f"Error {error} while trying to retreive ventricle perimeter")
+                list_perimeter.append(_ERROR_VALUE)
             
             try:
-                list_area2.append(imf.estimate_ventricle_area(mask, scale))
-                # list_area2.append(_ERROR_VALUE)
+                list_area.append(round(imf.estimate_ventricle_area(mask, scale), 2))
+                # list_area.append(_ERROR_VALUE)
             except Exception as error:
                 print(f"Error {error} while trying to retreive ventricle area")
-                list_area2.append(_ERROR_VALUE)
+                list_area.append(_ERROR_VALUE)
             
             try:
-                list_muscle_t.append(imf.estimate_muscle_thickness(img, mask, scale))
+                list_muscle_t.append(round(imf.estimate_muscle_thickness(img, mask, scale), 2))
                 # list_muscle_t.append(_ERROR_VALUE)
             except Exception as error:
                 print(f"Error {error} while trying to retreive muscle thickness")
@@ -94,40 +93,34 @@ def process_video(url, file, model, original_scale = 1, show_images= False):
             sys = 'ERROR'
             dias_name = 'ERROR'
             sys_name = 'ERROR'
+        
+        try:
+            EF = imf.calculate_ef(list_volume)
+        except Exception as error:
+            print(f"Error {error} while trying to calculate ejection fraction")
+            EF = _ERROR_VALUE    
 
         media = [] 
         media.append((video_name,'Video con máscaras'))
         media.append((dias_name,'Máscara de diástole'))
         media.append((sys_name,'Máscara de sístole'))
 
-        # data_set = {"ventricle_volume": list_volume, 
-        #             "atrium_area": list_area1, 
-        #             "ventricle_area": list_area2, 
-        #             "muscle_thickness": list_muscle_t,
-        #             "video_name": video_name,
-        #             "img_1_name": dias_name,
-        #             "img_2_name": sys_name}
         data_set = {"ventricle_volume": list_volume, 
-                    "atrium_area": list_area1, 
-                    "ventricle_area": list_area2, 
+                    "ventricle_perimeter": list_perimeter, 
+                    "ventricle_area": list_area, 
                     "muscle_thickness": list_muscle_t,
-                    "media": media}
+                    "media": media,
+                    "ejection_fraction": EF}
         
     except Exception as error:
         print(f"An excepetion {error} was raised")
-        # data_set = {"ventricle_volume": _ERROR_VALUE, 
-        #         "atrium_area": _ERROR_VALUE, 
-        #         "ventricle_area": _ERROR_VALUE, 
-        #         "muscle_thickness": _ERROR_VALUE,
-        #         "video_name": _ERROR_VALUE,
-        #         "img_1_name": _ERROR_VALUE,
-        #         "img_2_name": _ERROR_VALUE}
 
         data_set = {"ventricle_volume": _ERROR_VALUE, 
-                    "atrium_area": _ERROR_VALUE, 
+                    "ventricle_perimeter": _ERROR_VALUE, 
                     "ventricle_area": _ERROR_VALUE, 
                     "muscle_thickness": _ERROR_VALUE,
-                    "media": _ERROR_VALUE}
+                    "media": _ERROR_VALUE,
+                    "ejection_fraction": _ERROR_VALUE}
         
     #imf.show_ordered_frames(mask_list,list_volume)
         
@@ -142,8 +135,8 @@ def process_image(url, file, model, original_scale = 1, show_images = False):
     image = np.asarray(bytearray(resp.read()), dtype="uint8")
     img_to_process = cv.imdecode(image, cv.IMREAD_COLOR)
     list_volume = []
-    list_area1 = []
-    list_area2 = []
+    list_perimeter = []
+    list_area = []
     list_muscle_t = []
     
     try:
@@ -166,21 +159,20 @@ def process_image(url, file, model, original_scale = 1, show_images = False):
         list_volume.append(_ERROR_VALUE)
     
     try:
-        list_area1.append(imf.calculate_perimeter(mask, scale))
-        # atrium_area = _ERROR_VALUE
+        list_perimeter.append(round(imf.calculate_perimeter(mask, scale), 2))
     except Exception as error:
-        print(f"Error {error} while trying to retreive atrium area")
-        list_area1.append(_ERROR_VALUE)
+        print(f"Error {error} while trying to retreive ventricle perimeter")
+        list_perimeter.append(_ERROR_VALUE)
     
     try:
-        list_area2.append(imf.estimate_ventricle_area(mask, scale))
+        list_area.append(round(imf.estimate_ventricle_area(mask, scale), 2))
         # ventricle_area = _ERROR_VALUE
     except Exception as error:
         print(f"Error {error} while trying to retreive ventricle area")
-        list_area2.append(_ERROR_VALUE)
+        list_area.append(_ERROR_VALUE)
     
     try:
-        list_muscle_t.append(imf.estimate_muscle_thickness(img_to_process, mask, scale))
+        list_muscle_t.append(round(imf.estimate_muscle_thickness(img_to_process, mask, scale), 2))
         # muscle_thickness = _ERROR_VALUE
     except Exception as error:
         print(f"Error {error} while trying to retreive muscle thickness")
@@ -196,18 +188,14 @@ def process_image(url, file, model, original_scale = 1, show_images = False):
 
     media = [] 
     media.append((img_name,'Máscara'))
+    
+    FE = 0
 
-    # data_set = {"ventricle_volume": list_volume, 
-    #             "atrium_area": list_area1, 
-    #             "ventricle_area": list_area2, 
-    #             "muscle_thickness": list_muscle_t,
-    #             "video_name": 'None',
-    #             "img_1_name": img_name,
-    #             "img_2_name": 'None'}
     data_set = {"ventricle_volume": list_volume, 
-                "atrium_area": list_area1, 
-                "ventricle_area": list_area2, 
+                "ventricle_perimeter": list_perimeter, 
+                "ventricle_area": list_area, 
                 "muscle_thickness": list_muscle_t,
-                "media": media}
+                "media": media,
+                "ejection_fraction": FE}
     
     return data_set, concat_path

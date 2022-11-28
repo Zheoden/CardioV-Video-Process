@@ -12,8 +12,8 @@ _CENTIMETERS = 1
 _ERROR_VALUE = -1
 _VOLUME_LIST = [180, 190, 200, 201, 202, 199, 182]
 MASK = "C:/Users/matia/cardiov/mask_test1.png"
-# TMP_DIR = 'D:/'
-TMP_DIR = 'C:/Users/fedeb/OneDrive/Escritorio/TMP'
+TMP_DIR = 'D:/'
+# TMP_DIR = 'C:/Users/fedeb/OneDrive/Escritorio/TMP'
 
 def process_video(path, file, model, original_scale = 1, show_images= False):
     
@@ -35,6 +35,7 @@ def process_video(path, file, model, original_scale = 1, show_images= False):
                     scale = 1
                     
                 frame = imf.make_square(frame)
+
             except:
                 mask = _ERROR_VALUE
             
@@ -88,7 +89,7 @@ def process_video(path, file, model, original_scale = 1, show_images= False):
             print(f"ERROR: {error}")
             video = _ERROR_VALUE
             video_name = 'ERROR'
-            
+
         try:
             dias, sys = imf.get_max_vol_img(video_frames, file, mask_list, list_volume, TMP_DIR)
             dias_name = dias.split('/')[-1]
@@ -105,19 +106,24 @@ def process_video(path, file, model, original_scale = 1, show_images= False):
         media.append((dias_name,'Máscara de diástole'))
         media.append((sys_name,'Máscara de sístole'))
                 
-        # data_set = {"ventricle_volume": list_volume, 
-        #             "atrium_area": list_area1, 
-        #             "ventricle_area": list_area2, 
-        #             "muscle_thickness": list_muscle_t,
-        #             "video_name": video_name,
-        #             "img_1_name": dias_name,
-        #             "img_2_name": sys_name}
+        try:
+            print("Ejection fraction")
+            EF = imf.calculate_ef(list_volume)
+        except Exception as error:
+            print(f"Error {error} while trying to calculate ejection fraction")
+            EF = _ERROR_VALUE    
+
+        media = [] 
+        media.append((video_name,'Video con máscaras'))
+        media.append((dias_name,'Máscara de diástole'))
+        media.append((sys_name,'Máscara de sístole'))
 
         data_set = {"ventricle_volume": list_volume, 
             "atrium_area": list_area1, 
             "ventricle_area": list_area2, 
             "muscle_thickness": list_muscle_t,
-            "media": media}
+            "media": media,
+            "ejection_fraction": EF}
         
     except Exception as error:
         print(f"An excepetion {error} was raised")

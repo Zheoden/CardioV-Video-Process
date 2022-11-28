@@ -27,20 +27,27 @@ def get_heart_values():
     #url = 'https://cardiov-assets.s3.amazonaws.com/04050916-69a2-4751-9fbe-c164fdf7fad3.jpg' # img
     url = s3_client.generate_presigned_url( ClientMethod='get_object', Params={ 'Bucket': s3_bucket_name, 'Key': file } )
     type = request.args.get('type')
+    scale = request.args.get('e')
+    
+    scale = 1 if scale == None else scale 
     
     if type == 'i':
-        val, img_path = pc.process_image(url= url, file = file, model = loaded_model)
+        val, img_path = pc.process_image(url= url, file = file, original_scale=scale, model = loaded_model)
         img_name = img_path.split("/")[-1]
         s3_client.upload_file(img_path, s3_bucket_name, img_name)
     else:
-        val, video_path, dias_path, sys_path = pc.process_video(url= url, file = file,  model = loaded_model)
+        val, video_path, dias_path, sys_path = pc.process_video(url= url, file = file, original_scale=scale, model = loaded_model)
         video_name = video_path.split("/")[-1]
         dias_name = dias_path.split("/")[-1]
         sys_name = sys_path.split("/")[-1]
-        s3_client.upload_file(video_path, s3_bucket_name, video_name)
-        s3_client.upload_file(dias_path, s3_bucket_name, dias_name)
-        s3_client.upload_file(sys_path, s3_bucket_name, sys_name)
-    
+        s3_client.upload_file(video_path, s3_bucket_name, video_name, ExtraArgs={'ACL':'public-read'})
+        s3_client.upload_file(dias_path, s3_bucket_name, dias_name, ExtraArgs={'ACL':'public-read'})
+        s3_client.upload_file(sys_path, s3_bucket_name, sys_name, ExtraArgs={'ACL':'public-read'})
+        
+        os.remove(video_path) if os.path.isfile(video_path) else print("No video to be deleted!")
+        os.remove(dias_path) if os.path.isfile(dias_path) else print("No dias to be deleted!")
+        os.remove(sys_path) if os.path.isfile(sys_path) else print("No sys to be deleted!")
+
     return val
 
 if __name__ == '__main__':
