@@ -20,6 +20,7 @@ def process_video(path, file, model, original_scale = 1, show_images= False):
     try:
         vid = cv.VideoCapture(path)
         video_frames = []
+        video_frames_original = []
         mask_list = []
         success, frame = vid.read()
         frames = 0
@@ -27,14 +28,16 @@ def process_video(path, file, model, original_scale = 1, show_images= False):
         while success:
             try:
                 mask = segmentation.get_ventricle_mask(frame, model)
-                
+                video_frames_original.append(frame)
                 try:
                     scale = imf.rescale(frame, original_scale)
                 except Exception as e:
                     print(f"Unable to get the scale, setting to default: 1. Error {e}")
                     scale = 1
-                    
+                print(f"SCALE ::::::::::::::::::::::::::::::::::::::: {scale}")
+                
                 frame = imf.make_square(frame)
+                
 
             except:
                 mask = _ERROR_VALUE
@@ -62,7 +65,7 @@ def process_video(path, file, model, original_scale = 1, show_images= False):
                 list_volume.append(_ERROR_VALUE)
             
             try:
-                list_area1.append(imf.calculate_perimeter(img, scale))
+                list_area1.append(imf.calculate_perimeter(mask, scale))
                 # list_area1.append(_ERROR_VALUE)
             except Exception as error:
                 print(f"Error {error} while trying to retreive atrium area")
@@ -125,6 +128,13 @@ def process_video(path, file, model, original_scale = 1, show_images= False):
             "media": media,
             "ejection_fraction": EF}
         
+        index_max = list_volume.index(max(list_volume))
+        index_min = list_volume.index(min(list_volume))
+        print(max(list_volume))
+        print(min(list_volume))
+        cv.imwrite('C:\\Users\\matia\\cardiov\\sys_vol.jpg', video_frames_original[index_min])
+        cv.imwrite('C:\\Users\\matia\\cardiov\\dias_vol.jpg', video_frames_original[index_max])
+        
     except Exception as error:
         print(f"An excepetion {error} was raised")
         # data_set = {"ventricle_volume": _ERROR_VALUE, 
@@ -152,11 +162,11 @@ def process_image(path, file, model, original_scale = 1, show_images = False):
     print('Initializing img processing for path:')
     print(path)
     img_to_process = cv.imread(path)
-    
+        
     try:
         mask = sg.get_ventricle_mask(img_to_process, model) # replace with img when segmentation is finished
         #mask = img_to_process
-        img_to_process = imf.make_square(img_to_process)
+        # img_to_process = imf.make_square(img_to_process)
     except:
         raise Exception("Unable to get the mask, aborting")
     
@@ -166,6 +176,7 @@ def process_image(path, file, model, original_scale = 1, show_images = False):
         print("Unable to get the scale, setting to default: 1")
         scale = 1
     
+    img_to_process = imf.make_square(img_to_process)
     #imf.show_img(mask, "result!")
 
     try:
@@ -176,15 +187,15 @@ def process_image(path, file, model, original_scale = 1, show_images = False):
         volume = _ERROR_VALUE
     
     try:
-        #atrium_area = imf.calculate_perimeter(mask, scale)
-        atrium_area = _ERROR_VALUE
+        atrium_area = imf.calculate_perimeter(mask, scale)
+        #atrium_area = _ERROR_VALUE
     except Exception as error:
         print(f"Error {error} while trying to retreive atrium area")
         atrium_area = _ERROR_VALUE
     
     try:
-        #ventricle_area = imf.estimate_ventricle_area(mask, scale)
-        ventricle_area = _ERROR_VALUE
+        ventricle_area = imf.estimate_ventricle_area(mask, scale)
+        #ventricle_area = _ERROR_VALUE
     except Exception as error:
         print(f"Error {error} while trying to retreive ventricle area")
         ventricle_area = _ERROR_VALUE
